@@ -15,9 +15,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 
 #%% Importation de mes donnees
-train1 = pd.read_csv('C:/Users/conra/Desktop/STAGE/PROJET PERSONNEL/PROJET SNCF/train_f_x.csv')
-train2 = pd.read_csv('C:/Users/conra/Desktop/STAGE/PROJET PERSONNEL/PROJET SNCF/y_train_sncf.csv')
-X_a_predire = pd.read_csv('C:/Users/conra/Desktop/STAGE/PROJET PERSONNEL/PROJET SNCF/test_f_x_THurtzP.csv')
+train1 = pd.read_csv('train_f_x.csv')
+train2 = pd.read_csv('y_train_sncf.csv')
+X_a_predire = pd.read_csv('test_f_x_THurtzP.csv')
 
 
 #%% Fusion de mes données d'entrainement
@@ -202,6 +202,6 @@ y_sncf_predit['y_chap'] = y_chap
 
 y_sncf_predit.columns = ['index', 'y']
 
-y_sncf_predit.to_csv("C:/Users/conra/Desktop/STAGE/PROJET PERSONNEL/PROJET SNCF/y_sncf_predit.csv", index=False)
+y_sncf_predit.to_csv("y_sncf_predit.csv", index=False)
 
 
