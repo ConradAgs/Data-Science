@@ -1,0 +1,544 @@
+---
+title: "HTA"
+author: "Conrad"
+date: "09/04/2022"
+output: html_document
+---
+
+
+```{r}
+library(haven)
+base_f <- read_sav("BJIR71SV/BJIR71FL_R.SAV")
+base_h <- read_sav("BJMR71SV/BJMR71FL.SAV")
+```
+
+
+
+```{r}
+library(dplyr)
+library(tibble)
+library(tidyr)
+library(forcats)
+
+base_h=subset(base_h,select=c(VG02,MV013,MV025,MV106,MV501,MV717,MV190,MV101,SM106DC,SM106DB,SM106DD,SM907,SM941D,SM941S,SM902,SM904,MV463A,SM106DA))
+base_f=subset(base_f,select=c(VG02,MV013,MV025,MV106,MV501,MV717,MV190,MV101,SM106DC,SM106DB,SM106DD,SM907,SM941D,SM941S,SM902,SM904,MV463A,SM106DA))
+#FUSION
+FUSION=full_join(base_f,base_h)
+#FILTRAGE SUR LES INDIVIDUS DE PLUS DE 30ANS
+base=filter(FUSION,MV013>3)
+#CREATION DE LA VARIABLE DEPENDENTE
+attach(base)
+base$hypertension<-ifelse(SM902==1|SM941S>=140&SM106DC==0&SM106DB==0&SM106DD==0&SM106DA==0|SM941D>=90&SM106DC==0&SM106DB==0&SM106DD==0&SM106DA==0,1,0)
+
+base_f$hypertension<-ifelse(base_f$SM902==1|base_f$SM941S>=140&base_f$SM106DC==0&base_f$SM106DB==0&base_f$SM106DD==0&base_f$SM106DA==0|base_f$SM941D>=90&base_f$SM106DC==0&base_f$SM106DB==0&base_f$SM106DD==0&base_f$SM106DA==0,1,0)
+
+base_h$hypertension<-ifelse(base_h$SM902==1|base_h$SM941S>=140&base_h$SM106DC==0&base_h$SM106DB==0&base_h$SM106DD==0&base_h$SM106DA==0|base_h$SM941D>=90&base_h$SM106DC==0&base_h$SM106DB==0&base_h$SM106DD==0&base_h$SM106DA==0,1,0)
+
+
+BASE=filter(base,hypertension>=0)
+BASE_HOMME=filter(base_h,base_h$hypertension>=0)
+BASE_FEMME=filter(base_f,base_f$hypertension>=0)
+
+
+
+BASE$hypertension<-as.factor(BASE$hypertension)
+BASE_HOMME$hypertension<-as.factor(BASE_HOMME$hypertension)
+BASE_FEMME$hypertension<-as.factor(BASE_FEMME$hypertension)
+
+BASE_HOMME=filter(BASE_HOMME,BASE_HOMME$MV013>3)
+BASE_FEMME=filter(BASE_FEMME,BASE_FEMME$MV013>3)
+
+summary(BASE$hypertension)
+#RECODAGE DES VARIABLES
+attach(BASE)
+##RECODAGE DES VARIABLES PRESSION SYSTOLIC ET DIASTOLIC EN CLASSE
+BASE$SM941D<-cut(BASE$SM941D, breaks = c(0,89,400,999))
+BASE$SM941S<-cut(BASE$SM941S, breaks = c(0,139,400,999))
+##TRANSFORMATION DES VARIABLES QUANTI EN QUALI
+BASE$MV013<-as.factor(BASE$MV013)
+BASE$VG02<-as.factor(BASE$VG02)
+BASE$MV025<-as.factor(BASE$MV025)
+BASE$MV106<-as.factor(BASE$MV106)
+BASE$MV501<-as.factor(BASE$MV501)
+BASE$MV190<-as.factor(BASE$MV190)
+BASE$MV101<-as.factor(BASE$MV101)
+BASE$MV463A<-as.factor(BASE$MV463A)
+BASE$SM106DB<-as.factor(BASE$SM106DB)
+BASE$SM106DD<-as.factor(BASE$SM106DD)
+BASE$SM907<-as.factor(BASE$SM907)
+BASE$SM902<-as.factor(BASE$SM902)
+BASE$SM904<-as.factor(BASE$SM904)
+BASE$MV717<-as.factor(BASE$MV717)
+BASE$SM941S<-as.factor(BASE$SM941S)
+BASE$SM941D<-as.factor(BASE$SM941D)
+#RECODAGE
+BASE$MV013<-fct_recode(BASE$MV013,"30-34ans"="4","35-39ans"="5","40-44ans"="6","45-49ans"="7","50-54ans"="8","55-59ans"="9","60-64ans"="10")
+BASE$VG02<-fct_recode(BASE$VG02,"Masculin"="1","Feminin"="2")
+BASE$MV025<-fct_recode(BASE$MV025,"Urbain"="1","Rural"="2")
+BASE$MV106<-fct_recode(BASE$MV106,"Sans instruction"="0","Primaire"="1","Secondaire"="2","Superieure"="3")
+BASE$MV501<-fct_recode(BASE$MV501,"Jamais en union"="0","Marié(e)"="1","Vie avec un partenaire"="2","Veuf(ve)"="3","Divorce(e)"="4","Separe(e)"="5")
+BASE$MV190<-fct_recode(BASE$MV190,"Tres pauvre"="1","Pauvre"="2","Moyen"="3","Riche"="4","Tres riche"="5")
+BASE$MV463A<-fct_recode(BASE$MV463A,"Non"="0","Oui"="1")
+BASE$SM106DB<-fct_recode(BASE$SM106DB,"Non"="0","Oui"="1")
+BASE$SM106DD<-fct_recode(BASE$SM106DD,"Non"="0","Oui"="1")
+BASE$SM907<-fct_recode(BASE$SM907,"Non"="0","Oui"="1")
+BASE$SM902<-fct_recode(BASE$SM902,"Non"="0","Oui"="1")
+BASE$SM904<-fct_recode(BASE$SM904,"Non"="0","Oui"="1")
+BASE$SM941S<-fct_recode(BASE$SM941S,"Hypertendu"="(139,400]", "Non hypertendu"="(0,139]","No BP result"="(400,999]")
+BASE$SM941D<-fct_recode(BASE$SM941D,"Hypertendu"="(89,400]", "Non hypertendu"="(0,89]","No BP result"="(400,999]")
+BASE$hypertension<-fct_recode(BASE$hypertension,"Non hypertendu"="0","Hypertendu"="1")
+BASE$MV101=fct_recode(BASE$MV101,"nord"="1","nord"="2","nord"="4","nord"="7","sud"="3","sud"="8","sud"="9","sud"="10","centre"="5","centre"="6","centre"="11","centre"="12")
+BASE$MV717=fct_recode(BASE$MV717,"occupé"="1","occupé"="2","occupé"="3","occupé"="4","occupé"="5","occupé"="7","occupé"="8","occupé"="9","occupé"="96","occupé"="98","Non occupé"="0","occupé"="6")
+summary(BASE)
+#RENOMMER LES VARIABLES
+attach(BASE)
+BASE<-BASE%>%dplyr::rename(milieu_residence=MV025, age=MV013, region=MV101, instruction=MV106, etat_mat=MV501, occupation=MV717, niveau_vie=MV190, diabetes=SM907, caffeine=SM106DB, sport_intensif=SM106DD, genre=VG02,deja_eu_HTA=SM902, medicament_HTA=SM904,systolic=SM941S,diastolic=SM941D,cigarette=MV463A)
+names(BASE)
+summary(BASE)
+attach(BASE)
+BASE=subset(BASE,select=c(genre,age,milieu_residence,instruction,etat_mat,occupation,niveau_vie,region,diabetes,cigarette,hypertension))
+```
+
+----------------------------------
+RECODAGE BASE HOMME
+----------------------------------
+```{r}
+##RECODAGE DES VARIABLES PRESSION SYSTOLIC ET DIASTOLIC EN CLASSE
+BASE_HOMME$SM941D<-cut(BASE_HOMME$SM941D, breaks = c(0,89,400,999))
+BASE_HOMME$SM941S<-cut(BASE_HOMME$SM941S, breaks = c(0,139,400,999))
+##TRANSFORMATION DES VARIABLES QUANTI EN QUALI
+BASE_HOMME$MV013<-as.factor(BASE_HOMME$MV013)
+BASE_HOMME$VG02<-as.factor(BASE_HOMME$VG02)
+BASE_HOMME$MV025<-as.factor(BASE_HOMME$MV025)
+BASE_HOMME$MV106<-as.factor(BASE_HOMME$MV106)
+BASE_HOMME$MV501<-as.factor(BASE_HOMME$MV501)
+BASE_HOMME$MV190<-as.factor(BASE_HOMME$MV190)
+BASE_HOMME$MV101<-as.factor(BASE_HOMME$MV101)
+BASE_HOMME$MV463A<-as.factor(BASE_HOMME$MV463A)
+BASE_HOMME$SM106DB<-as.factor(BASE_HOMME$SM106DB)
+BASE_HOMME$SM106DD<-as.factor(BASE_HOMME$SM106DD)
+BASE_HOMME$SM907<-as.factor(BASE_HOMME$SM907)
+BASE_HOMME$SM902<-as.factor(BASE_HOMME$SM902)
+BASE_HOMME$SM904<-as.factor(BASE_HOMME$SM904)
+BASE_HOMME$MV717<-as.factor(BASE_HOMME$MV717)
+BASE_HOMME$SM941S<-as.factor(BASE_HOMME$SM941S)
+BASE_HOMME$SM941D<-as.factor(BASE_HOMME$SM941D)
+#RECODAGE
+BASE_HOMME$MV013<-fct_recode(BASE_HOMME$MV013,"30-34ans"="4","35-39ans"="5","40-44ans"="6","45-49ans"="7","50-54ans"="8","55-59ans"="9","60-64ans"="10")
+BASE_HOMME$VG02<-fct_recode(BASE_HOMME$VG02,"Masculin"="1","Feminin"="2")
+BASE_HOMME$MV025<-fct_recode(BASE_HOMME$MV025,"Urbain"="1","Rural"="2")
+BASE_HOMME$MV106<-fct_recode(BASE_HOMME$MV106,"Sans instruction"="0","Primaire"="1","Secondaire"="2","Superieure"="3")
+BASE_HOMME$MV501<-fct_recode(BASE_HOMME$MV501,"Jamais en union"="0","Marié(e)"="1","Vie avec un partenaire"="2","Veuf(ve)"="3","Divorce(e)"="4","Separe(e)"="5")
+BASE_HOMME$MV190<-fct_recode(BASE_HOMME$MV190,"Tres pauvre"="1","Pauvre"="2","Moyen"="3","Riche"="4","Tres riche"="5")
+BASE_HOMME$MV463A<-fct_recode(BASE_HOMME$MV463A,"Non"="0","Oui"="1")
+BASE_HOMME$SM106DB<-fct_recode(BASE_HOMME$SM106DB,"Non"="0","Oui"="1")
+BASE_HOMME$SM106DD<-fct_recode(BASE_HOMME$SM106DD,"Non"="0","Oui"="1")
+BASE_HOMME$SM907<-fct_recode(BASE_HOMME$SM907,"Non"="0","Oui"="1")
+BASE_HOMME$SM902<-fct_recode(BASE_HOMME$SM902,"Non"="0","Oui"="1")
+BASE_HOMME$SM904<-fct_recode(BASE_HOMME$SM904,"Non"="0","Oui"="1")
+BASE_HOMME$SM941S<-fct_recode(BASE_HOMME$SM941S,"Hypertendu"="(139,400]", "Non hypertendu"="(0,139]","No BP result"="(400,999]")
+BASE_HOMME$SM941D<-fct_recode(BASE_HOMME$SM941D,"Hypertendu"="(89,400]", "Non hypertendu"="(0,89]","No BP result"="(400,999]")
+BASE_HOMME$hypertension<-fct_recode(BASE_HOMME$hypertension,"Non hypertendu"="0","Hypertendu"="1")
+BASE_HOMME$MV101=fct_recode(BASE_HOMME$MV101,"nord"="1","nord"="2","nord"="4","nord"="7","sud"="3","sud"="8","sud"="9","sud"="10","centre"="5","centre"="6","centre"="11","centre"="12")
+BASE_HOMME$MV717=fct_recode(BASE_HOMME$MV717,"occupé"="1","occupé"="2","occupé"="3","occupé"="4","occupé"="5","occupé"="7","occupé"="8","occupé"="9","occupé"="96","occupé"="98","Non occupé"="0","occupé"="6")
+attach(BASE_HOMME)
+BASE_HOMME<-BASE_HOMME%>%dplyr::rename(milieu_residence=MV025, age=MV013, region=MV101, instruction=MV106, etat_mat=MV501, occupation=MV717, niveau_vie=MV190, diabetes=SM907, caffeine=SM106DB, sport_intensif=SM106DD, genre=VG02,deja_eu_HTA=SM902, medicament_HTA=SM904,systolic=SM941S,diastolic=SM941D,cigarette=MV463A)
+names(BASE_HOMME)
+summary(BASE_HOMME)
+attach(BASE_HOMME)
+BASE_HOMME=subset(BASE_HOMME,select=c(genre,age,milieu_residence,instruction,etat_mat,occupation,niveau_vie,region,diabetes,cigarette,hypertension))
+```
+
+-------------------------------------------
+#RECODAGE BASE FEMME
+-------------------------------------------
+```{r}
+##RECODAGE DES VARIABLES PRESSION SYSTOLIC ET DIASTOLIC EN CLASSE
+BASE_FEMME$SM941D<-cut(BASE_FEMME$SM941D, breaks = c(0,89,400,999))
+BASE_FEMME$SM941S<-cut(BASE_FEMME$SM941S, breaks = c(0,139,400,999))
+##TRANSFORMATION DES VARIABLES QUANTI EN QUALI
+BASE_FEMME$MV013<-as.factor(BASE_FEMME$MV013)
+BASE_FEMME$VG02<-as.factor(BASE_FEMME$VG02)
+BASE_FEMME$MV025<-as.factor(BASE_FEMME$MV025)
+BASE_FEMME$MV106<-as.factor(BASE_FEMME$MV106)
+BASE_FEMME$MV501<-as.factor(BASE_FEMME$MV501)
+BASE_FEMME$MV190<-as.factor(BASE_FEMME$MV190)
+BASE_FEMME$MV101<-as.factor(BASE_FEMME$MV101)
+BASE_FEMME$MV463A<-as.factor(BASE_FEMME$MV463A)
+BASE_FEMME$SM106DB<-as.factor(BASE_FEMME$SM106DB)
+BASE_FEMME$SM106DD<-as.factor(BASE_FEMME$SM106DD)
+BASE_FEMME$SM907<-as.factor(BASE_FEMME$SM907)
+BASE_FEMME$SM902<-as.factor(BASE_FEMME$SM902)
+BASE_FEMME$SM904<-as.factor(BASE_FEMME$SM904)
+BASE_FEMME$MV717<-as.factor(BASE_FEMME$MV717)
+BASE_FEMME$SM941S<-as.factor(BASE_FEMME$SM941S)
+BASE_FEMME$SM941D<-as.factor(BASE_FEMME$SM941D)
+#RECODAGE
+BASE_FEMME$MV013<-fct_recode(BASE_FEMME$MV013,"30-34ans"="4","35-39ans"="5","40-44ans"="6","45-49ans"="7")
+BASE_FEMME$VG02<-fct_recode(BASE_FEMME$VG02,"Masculin"="1","Feminin"="2")
+BASE_FEMME$MV025<-fct_recode(BASE_FEMME$MV025,"Urbain"="1","Rural"="2")
+BASE_FEMME$MV106<-fct_recode(BASE_FEMME$MV106,"Sans instruction"="0","Primaire"="1","Secondaire"="2","Superieure"="3")
+BASE_FEMME$MV501<-fct_recode(BASE_FEMME$MV501,"Jamais en union"="0","Marié(e)"="1","Vie avec un partenaire"="2","Veuf(ve)"="3","Divorce(e)"="4","Separe(e)"="5")
+BASE_FEMME$MV190<-fct_recode(BASE_FEMME$MV190,"Tres pauvre"="1","Pauvre"="2","Moyen"="3","Riche"="4","Tres riche"="5")
+BASE_FEMME$MV463A<-fct_recode(BASE_FEMME$MV463A,"Non"="0","Oui"="1")
+BASE_FEMME$SM106DB<-fct_recode(BASE_FEMME$SM106DB,"Non"="0","Oui"="1")
+BASE_FEMME$SM106DD<-fct_recode(BASE_FEMME$SM106DD,"Non"="0","Oui"="1")
+BASE_FEMME$SM907<-fct_recode(BASE_FEMME$SM907,"Non"="0","Oui"="1")
+BASE_FEMME$SM902<-fct_recode(BASE_FEMME$SM902,"Non"="0","Oui"="1")
+BASE_FEMME$SM904<-fct_recode(BASE_FEMME$SM904,"Non"="0","Oui"="1")
+BASE_FEMME$SM941S<-fct_recode(BASE_FEMME$SM941S,"Hypertendu"="(139,400]", "Non hypertendu"="(0,139]","No BP result"="(400,999]")
+BASE_FEMME$SM941D<-fct_recode(BASE_FEMME$SM941D,"Hypertendu"="(89,400]", "Non hypertendu"="(0,89]","No BP result"="(400,999]")
+BASE_FEMME$hypertension<-fct_recode(BASE_FEMME$hypertension,"Non hypertendu"="0","Hypertendu"="1")
+BASE_FEMME$MV101=fct_recode(BASE_FEMME$MV101,"nord"="1","nord"="2","nord"="4","nord"="7","sud"="3","sud"="8","sud"="9","sud"="10","centre"="5","centre"="6","centre"="11","centre"="12")
+BASE_FEMME$MV717=fct_recode(BASE_FEMME$MV717,"occupé"="1","occupé"="2","occupé"="3","occupé"="4","occupé"="5","occupé"="7","occupé"="8","occupé"="9","occupé"="96","occupé"="98","Non occupé"="0","occupé"="6")
+attach(BASE_FEMME)
+BASE_FEMME<-BASE_FEMME%>%dplyr::rename(milieu_residence=MV025, age=MV013, region=MV101, instruction=MV106, etat_mat=MV501, occupation=MV717, niveau_vie=MV190, diabetes=SM907, caffeine=SM106DB, sport_intensif=SM106DD, genre=VG02,deja_eu_HTA=SM902, medicament_HTA=SM904,systolic=SM941S,diastolic=SM941D,cigarette=MV463A)
+names(BASE_FEMME)
+summary(BASE_FEMME)
+attach(BASE_FEMME)
+BASE_FEMME=subset(BASE_FEMME,select=c(genre,age,milieu_residence,instruction,etat_mat,occupation,niveau_vie,region,diabetes,cigarette,hypertension))
+```
+
+
+
+```{r}
+#STATISTIQUES DESCRIPTIVES UNIVARIEES
+attach(BASE)
+table(hypertension)
+table(age)
+table(genre)
+table(milieu_residence)
+table(region)
+table(instruction)
+table(etat_mat)
+table(occupation)
+table(niveau_vie)
+table(diabetes)
+table(cigarette)
+#STATISTIQUES DESCRIPTIVES BIVARIEES
+tab1<-table(age,hypertension)
+tab2<-table(genre,hypertension)
+tab3<-table(milieu_residence,hypertension)
+tab4<-table(region,hypertension)
+tab5<-table(instruction,hypertension)
+tab6<-table(etat_mat,hypertension)
+tab7<-table(occupation,hypertension)
+tab8<-table(niveau_vie,hypertension)
+tab9<-table(diabetes,hypertension)
+tab10<-table(cigarette,hypertension)
+tab1
+tab2
+tab3
+tab4
+tab5
+tab6
+tab7
+tab8
+tab9
+tab10
+#POURCENTAGE(PROFIL COLONNE)
+prop.table(tab1)
+prop.table(tab2)
+prop.table(tab3)
+prop.table(tab4)
+prop.table(tab5)
+prop.table(tab6)
+prop.table(tab7)
+prop.table(tab8)
+prop.table(tab9)
+prop.table(tab10)
+```
+
+
+
+```{r}
+#TEST D_INDEPENDANCE CHI DEUX
+attach(BASE)
+chisq.test(age,hypertension)
+chisq.test(genre,hypertension)
+chisq.test(milieu_residence,hypertension)
+chisq.test(region,hypertension)
+chisq.test(instruction,hypertension)
+chisq.test(etat_mat,hypertension)
+chisq.test(occupation,hypertension)
+chisq.test(niveau_vie,hypertension)
+chisq.test(diabetes,hypertension)
+chisq.test(cigarette,hypertension)
+```
+
+
+
+```{r}
+#ANALYSE EXPLICATIVE#MODELE LOGIT/MODELE PROBIT
+attach(BASE)
+modele_log<-glm(hypertension~age+genre+milieu_residence+region+instruction+etat_mat+occupation+niveau_vie+diabetes,data=BASE,family = binomial(logit))
+summary(modele_log)
+
+modele_prob<-glm(hypertension~age+genre+milieu_residence+region+instruction+etat_mat+occupation+niveau_vie+diabetes,data=BASE,family = binomial(probit))
+summary(modele_prob)
+
+modele_log$aic
+modele_prob$aic
+'LE MEILLEUR MODE EST LE MODELE PROBIT'
+```
+
+
+
+```{r}
+library(tidyverse)
+library(caret)
+library(leaps)
+step.model <- step(modele_prob, direction = "both",k=2)
+
+#ETIMATION DU NOUVEAU MODELE
+modele_probit<-glm(hypertension~age + genre + milieu_residence + region + instruction + etat_mat + niveau_vie + diabetes ,data=BASE,family = binomial(probit))
+modele_probit$aic
+summary(modele_probit)
+
+```
+
+--------------------------------------
+#DIAGNOSTIC
+--------------------------------------
+```{r}
+#AUC
+attach(BASE)
+library(pROC)
+library(ROCR)
+prediction=predict(modele_probit,BASE,type="response")
+roc_object=roc(BASE$hypertension,prediction)
+plot(roc_object)
+auc(roc_object)
+'AUC>0,6 ET PROCHE DE 1#DONC LE MODELE A DE MEILLEURE CAPACITE DISCRIMINATOIRE#LE MODELE EST BON'
+
+#MARGE D_ERREUR (MATRICE DE CONFONSION/CONFUSION)
+pred.prob.probit = predict(modele_probit, type = "response")
+pred.mod.probit = factor(ifelse(pred.prob.probit > 0.5, "1", "0"))
+mc.probit = table(BASE$hypertension, pred.mod.probit)
+tl = (mc.probit[1, 2] + mc.probit[2, 1]) / sum(mc.probit) 
+tl
+```
+
+----------------------------------------------
+#PERTINENCE DU MODELE
+----------------------------------------------
+```{r}
+#TEST DE HOSMER-LEMESHOW
+library(performance)
+performance_hosmer(modele_probit)
+'LA P_VALUE EST SUPERIEURE A 5%, L_AJUSTEMENT DU MODELE AUX DONNEES EST DONC BON'
+
+#REGLE DU POUCE
+library(stats)
+deviance(modele_probit)/df.residual(modele_probit)###0,8703103#PROCHE DE 1 
+
+#TEST DES RESIDUS DE PEARSON & TEST DES RESIDUS DE LA DEVIANCE
+s2=sum(residuals(modele_probit,type="pearson")^2)
+dd1=df.residual(modele_probit)
+pvaleur=1-pchisq(s2,dd1)
+pvaleur
+'LA P_VALUE EST SUPERIEURE A 5%#AINSI, LE %ODELE EST PERTINENT'
+
+pvaleur1=1-pchisq(deviance(modele_probit),df.residual(modele_probit))
+pvaleur1
+'LA P_VALUE EST SUPERIEURE A 5%#AINSI, LE %ODELE EST PERTINENT' 
+```
+
+--------------------------------------------
+#ODD RATIO
+--------------------------------------------
+```{r}
+library(questionr)
+odds.ratio(modele_probit)
+```
+
+--------------------------------------------
+#REGRESSION HOMME
+--------------------------------------------
+```{r}
+attach(BASE_HOMME)
+modele_log_H<-glm(hypertension~age+milieu_residence+region+instruction+etat_mat+occupation+niveau_vie+diabetes,data=BASE_HOMME,family = binomial(logit))
+summary(modele_log_H)
+modele_prob_H<-glm(hypertension~age+milieu_residence+region+instruction+etat_mat+occupation+niveau_vie+diabetes,data=BASE_HOMME,family = binomial(probit))
+summary(modele_prob_H)
+modele_log_H$aic
+modele_prob_H$aic
+
+step.model <- step(modele_prob_H, direction = "both",k=2)
+#ESTIMATION DU MODELE RETENU
+modele_probit_H<-glm(hypertension ~ age + region + instruction + etat_mat  + niveau_vie + diabetes ,data=BASE_HOMME,family = binomial(probit))
+modele_probit_H$aic
+summary(modele_probit_H)
+odds.ratio(modele_probit_H)
+
+
+
+
+prediction_H=predict(modele_probit_H,BASE_HOMME,type="response" )
+roc_object_H=roc(BASE_HOMME$hypertension,prediction_H)
+plot(roc_object_H)
+auc(roc_object_H)
+'AUC>0,6 ET PROCHE DE 1#DONC LE MODELE A DE MEILLEURE CAPACITE DISCRIMINATOIRE#LE MODELE EST BON'
+
+#TEST DE HOSMER-LEMESHOW
+library(performance)
+performance_hosmer(modele_probit_H)
+'LA P_VALUE EST SUPERIEURE A 5%, L_AJUSTEMENT DU MODELE AUX DONNEES EST DONC BON'
+
+#REGLE DU POUCE
+library(stats)
+deviance(modele_probit_H)/df.residual(modele_probit_H) 
+
+#TEST DES RESIDUS DE PEARSON & TEST DES RESIDUS DE LA DEVIANCE
+s2_H=sum(residuals(modele_probit_H,type="pearson")^2)
+dd1_H=df.residual(modele_probit_H)
+pvaleur_H=1-pchisq(s2_H,dd1_H)
+pvaleur_H
+'LA P_VALUE EST SUPERIEURE A 5%#AINSI, LE %ODELE EST PERTINENT'
+
+pvaleur_H=1-pchisq(deviance(modele_probit_H),df.residual(modele_probit_H))
+pvaleur_H
+'LA P_VALUE EST SUPERIEURE A 5%#AINSI, LE %ODELE EST PERTINENT'
+
+#MARGE D_ERREUR (MATRICE DE CONFONSION/CONFUSION)
+pred.prob.probit_H = predict(modele_probit_H, type = "response")
+pred.mod.probit_H = factor(ifelse(pred.prob.probit_H > 0.5, "1", "0"))
+mc.probit_H = table(BASE_HOMME$hypertension, pred.mod.probit_H)
+tl_H = (mc.probit_H[1, 2] + mc.probit_H[2, 1]) / sum(mc.probit_H) 
+tl_H
+```
+
+
+```{r}
+attach(BASE_FEMME)
+modele_log_F<-glm(hypertension~age+milieu_residence+region+instruction+etat_mat+occupation+niveau_vie+diabetes,data=BASE_FEMME,family = binomial(logit))
+summary(modele_log_F)
+modele_prob_F<-glm(hypertension~age+milieu_residence+region+instruction+etat_mat+occupation+niveau_vie+diabetes,data=BASE_FEMME,family = binomial(probit))
+summary(modele_prob_F)
+modele_log_F$aic
+modele_prob_F$aic
+
+step.model <- step(modele_prob_F, direction = "both",k=2)
+#ESTIMATION DU MODELE RETENU
+modele_probit_F<-glm(hypertension~age+milieu_residence+region+occupation+niveau_vie+diabetes,data=BASE_FEMME,family = binomial(probit))
+summary(modele_probit_F)
+modele_probit_F$aic
+odds.ratio(modele_probit_F)
+
+
+prediction_F=predict(modele_probit_F,BASE_FEMME,type="response")
+roc_object_F=roc(BASE_FEMME$hypertension,prediction_F)
+plot(roc_object_F)
+auc(roc_object_F)
+'AUC>0,6 ET PROCHE DE 1#DONC LE MODELE A DE MEILLEURE CAPACITE DISCRIMINATOIRE#LE MODELE EST BON'
+
+#TEST DE HOSMER-LEMESHOW
+library(performance)
+performance_hosmer(modele_probit_F)
+'LA P_VALUE EST SUPERIEURE A 5%, L_AJUSTEMENT DU MODELE AUX DONNEES EST DONC BON'
+
+#REGLE DU POUCE
+deviance(modele_probit_F)/df.residual(modele_probit_F) 
+
+#TEST DES RESIDUS DE PEARSON & TEST DES RESIDUS DE LA DEVIANCE
+s2_F=sum(residuals(modele_probit_F,type="pearson")^2)
+dd1_F=df.residual(modele_probit_F)
+pvaleur_F=1-pchisq(s2_F,dd1_F)
+pvaleur_F
+'LA P_VALUE EST SUPERIEURE A 5%#AINSI, LE %ODELE EST PERTINENT'
+
+pvaleur_F=1-pchisq(deviance(modele_probit_F),df.residual(modele_probit_F))
+pvaleur_F
+'LA P_VALUE EST SUPERIEURE A 5%#AINSI, LE %ODELE EST PERTINENT'
+
+#MARGE D_ERREUR (MATRICE DE CONFONSION/CONFUSION)
+pred.prob.probit_F = predict(modele_probit_F, type = "response")
+pred.mod.probit_F = factor(ifelse(pred.prob.probit_F > 0.5, "1", "0"))
+mc.probit_F = table(BASE_FEMME$hypertension, pred.mod.probit_F)
+tl_F = (mc.probit_F[1, 2] + mc.probit_F[2, 1]) / sum(mc.probit_F) 
+tl_F
+```
+
+
+
+```{r}
+library(margins)
+library(prediction)
+margins_summary(modele_probit)
+margins_summary(modele_probit_F)
+margins_summary(modele_probit_H)
+```
+
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
