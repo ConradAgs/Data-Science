@@ -3,7 +3,7 @@
 ## Contexte
 SNCF-Transilien, opérateur de trains de banlieue en Île-de-France, gère plus de 6 200 trains par jour pour transporter 3,2 millions de voyageurs. Ces voyageurs valident leurs cartes à puce sur nos portiques environ 2,3 millions de fois quotidiennement. Avec une croissance annuelle de 6 % entre 2015 et 2019, anticiper cette augmentation est crucial pour améliorer les services et optimiser l'exploitation.
 
-Accédez au challenge : https://challengedata.ens.fr/participants/challenges/149/
+Accédez au challenge : https://challengedata.ens.fr/challenges/149
 
 ## Objectif
 Prédire à moyen-long terme le nombre de validations par jour et par gare afin d'anticiper les flux de voyageurs et de mieux comprendre les tendances à venir.
