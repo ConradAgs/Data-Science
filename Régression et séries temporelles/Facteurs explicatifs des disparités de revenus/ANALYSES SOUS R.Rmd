@@ -1,0 +1,716 @@
+---
+title: "Facteurs explicatifs des disparités de revenus entre les départements de France"
+author: "ADOTANOU Uriel & AGOSSOU Conrad"
+date: "2024-11-20"
+geometry: a4paper,margin=1in
+output:
+  pdf_document: default
+  html_document:
+    theme: cerulean
+---
+
+## PROBLEMATIQUE
+
+Depuis plusieurs décennies, la répartition des revenus suscite l’intérêt des économistes. Depuis les années 1990, les inégalités de revenus et de richesses ont fait l’objet d’un regain d’attention, à la fois dans les travaux théoriques et les études empiriques (Tura et Assefa, 2017).
+
+Le choix des variables dans cette analyse s'appuie sur des recherches antérieures, bien que limitées, qui explorent les inégalités socio-économiques. Ces inégalités, caractérisées par des écarts significatifs entre les revenus des individus ou des ménages, demeurent un enjeu crucial pour nos sociétés. Malgré les progrès liés à la croissance économique et à l'amélioration générale des conditions de vie, cette prospérité n’a pas été répartie équitablement. En conséquence, de nombreux pays, qu’ils soient développés ou en développement, doivent faire face à des inégalités croissantes menaçant la cohésion sociale et la stabilité économique et politique.
+
+Les disparités de revenus trouvent leurs origines dans divers facteurs : l'accès inégal à l'éducation, les écarts de rémunération entre secteurs, les effets de la mondialisation et les mutations technologiques. Les travailleurs qualifiés dans des secteurs porteurs, comme la technologie ou la finance, jouissent souvent de revenus bien supérieurs à ceux des moins qualifiés, actifs dans des secteurs en déclin. Ces inégalités sont exacerbées par des facteurs sociaux tels que les discriminations liées au genre, à l’origine ethnique ou au lieu de résidence.
+
+Les conséquences de ces écarts sont profondes. Économiquement, elles peuvent freiner la croissance en réduisant la consommation des ménages à faibles revenus, tandis que les ménages aisés accumulent une épargne importante, accentuant les déséquilibres économiques. Socialement, ces inégalités alimentent des tensions, nuisent à la mobilité sociale, et perpétuent des cycles intergénérationnels de pauvreté.\
+Face à ces constats, une question essentielle se pose : quels facteurs socio-économiques et démographiques influencent les disparités de revenus, et quelles politiques publiques pourraient les réduire tout en soutenant une croissance durable et inclusive ?
+
+Cette problématique appelle à examiner les causes profondes des inégalités, à évaluer leur impact sur différents aspects de la vie sociale et économique, et à envisager des solutions concrètes. Il s'agit notamment d'identifier des actions gouvernementales, des réformes éducatives, ou des initiatives privées capables de favoriser une répartition plus équitable des richesses. Le défi réside dans la recherche d’un équilibre entre efficacité économique et justice sociale pour bâtir un avenir plus équitable.
+
+Plusieurs travaux ont exploré les multiples dimensions de ces inégalités. Par exemple, le Conseil d’Analyse Économique dans son rapport de 2001, met en lumière des facteurs explicatifs tels que le chômage, le taux d’emploi, l’âge, la composition des ménages, le patrimoine hérité et les politiques fiscales. Une étude au Sénégal (Ndeye Fatou Faye, Moussa Sall, François Affholder et Françoise Gérard) révèle également l’impact du milieu de vie (rural ou urbain) et de la densité de la population sur les écarts de revenus.
+
+Sur une perspective historique, Morrisson Christian et Wayne Snyder analysent les inégalités en France entre le XVIIIe siècle et 1985, en intégrant la notion de classes sociales, allant des ouvriers à la bourgeoisie, et en étudiant leur évolution en nombre et en revenus. Dans un autre registre, Marc Guérand , dans « Économie de l’éducation » insiste sur le rôle central de l’éducation dans la détermination des salaires. Il affirme que les inégalités éducatives influencent fortement la répartition des revenus et que l’éducation constitue à la fois un facteur de reproduction sociale et un levier pour réduire ces écarts.
+
+Enfin, dans « Inégalité des revenus et protection sociale » (Förster et Thévenot), les prestations sociales (pensions, aides, etc.) sont mises en avant comme des instruments essentiels pour réduire les disparités et garantir une meilleure cohésion sociale. Ainsi, une compréhension approfondie des inégalités de revenus et des leviers d’action est indispensable pour concevoir des politiques publiques capables de concilier justice sociale et dynamisme économique.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+```
+
+## 1. Packages
+
+```{r}
+# install.packages("summarytools")
+
+library(ggplot2)
+library(corrplot)
+library(AER) 
+library(car)
+library(sandwich)
+library(gridExtra)
+library(lmtest)
+library(kableExtra)
+library(sandwich)
+library(summarytools)
+library(olsrr)
+library(car)
+library(stargazer)
+```
+
+## 2. Importation des données, renommage et recodage des variables
+
+```{r}
+# Importation des données
+
+data <- read.table("data_dept.csv", skip = 3, sep = ";", quote = "")
+
+# Renommage des colonnes
+
+colnames(data) <- c("Code", "Departement", "Unites_legales", 
+                    "Taux_activite", "Non_scolarises_15_plus", 
+                    "Menages_imposes", "Mediane_niveau_vie", 
+                    "Prestations_sociales", "Pensions_retraites", 
+                    "Taux_pauvrete", "Densite_population", "Cadres", 
+                    "Intermediaires", "Ouvriers", "Taux_chomage")
+
+# Convertion des colonnes numériques
+
+data$Unites_legales <- as.numeric(data$Unites_legales)
+data$Taux_activite <- as.numeric(data$Taux_activite)
+data$Non_scolarises_15_plus <- as.numeric(data$Non_scolarises_15_plus)
+data$Menages_imposes <- as.numeric(data$Menages_imposes)
+data$Mediane_niveau_vie <- as.numeric(data$Mediane_niveau_vie)
+data$Prestations_sociales <- as.numeric(data$Prestations_sociales)
+data$Pensions_retraites <- as.numeric(data$Pensions_retraites)
+data$Taux_pauvrete <- as.numeric(data$Taux_pauvrete)
+data$Densite_population <- as.numeric(data$Densite_population)
+data$Cadres <- as.numeric(data$Cadres)
+data$Intermediaires <- as.numeric(data$Intermediaires)
+data$Ouvriers <- as.numeric(data$Ouvriers)
+data$Taux_chomage <- as.numeric(data$Taux_chomage)
+
+
+# Création de la variable 'Type_zone' en fonction de la densité de population
+
+data$Type_zone <- ifelse(data$Densite_population <= 51.58, "Rural", "Urbain")
+
+
+data$RegionParisienne <- ifelse(data$Code %in% c(75, 92, 93, 94, 77, 78, 91, 95)
+                                , 1, 0)
+
+
+# Suppression des valeurs manquantes
+
+data <- na.omit(data)
+
+```
+
+## 3. Présentation des variables
+
+| Libelé                 | Définition                                                                                                                       | Unité                       | Source         | Traitement                                |
+|-------------|-----------------------|-------------|-------------|-------------|
+| Code                   | Code départemental unique                                                                                                        | \-                          | INSEE          | Aucun                                     |
+| Departement            | Nom du département correspondant au code                                                                                         | \-                          | INSEE          | Aucun                                     |
+| Unites_legales         | Nombre total d'unités légales (entreprises et structures enregistrées officiellement) dans le département.                       | Nombre                      | INSEE          | Aucun                                     |
+| Taux_activite          | Proportion de la population active (en pourcentage) dans une tranche d'âge donnée.                                               | Pourcentage                 | INSEE          | Aucun                                     |
+| Non_scolarises_15_plus | Nombre de personnes âgées de 15 ans ou plus qui ne sont plus inscrites dans un établissement scolaire.                           | Nombre                      | INSEE          | Aucun                                     |
+| Menages_imposes        | Part des ménages fiscaux soumis à l'impôt (en pourcentage).                                                                      | Pourcentage                 | INSEE          | Aucun                                     |
+| Mediane_niveau_vie     | Médiane du niveau de vie annuel en euros.                                                                                        | Euro                        | INSEE          | Aucun                                     |
+| Prestations_sociales   | Part des prestations sociales dans le revenu disponible (en pourcentage), mesurant la dépendance des revenus aux aides sociales. | Pourcentage                 | INSEE          | Aucun                                     |
+| Pensions_retraites     | Part des pensions, retraites et rentes dans le revenu disponible (en pourcentage).                                               | Pourcentage                 | INSEE          | Aucun                                     |
+| Taux_pauvrete          | Proportion des personnes dont le niveau de vie est inférieur au seuil de pauvreté (en pourcentage).                              | Pourcentage                 | INSEE          | Aucun                                     |
+| Densite_population     | Nombre d’habitants par kilomètre carré, reflétant la concentration de population dans le département.                            | Habitants/kilomètres carrés | INSEE          | Aucun                                     |
+| Cadres                 | Part des cadres et des professions intellectuelles supérieures parmi les emplois locaux (en pourcentage).                        | Pourcentage                 | INSEE          | Aucun                                     |
+| Intermediaires         | Part des professions intermédiaires parmi les emplois locaux (en pourcentage).                                                   | Pourcentage                 | INSEE          | Aucun                                     |
+| Ouvriers               | Part des ouvriers parmi les emplois locaux (en pourcentage).                                                                     | Pourcentage                 | INSEE          | Aucun                                     |
+| Taux_chomage           | Taux annuel moyen de chômage (en pourcentage).                                                                                   | Pourcentage                 | INSEE          | Aucun                                     |
+| Type_zone              | Type du département (Rural ou Urbain)                                                                                            | \-                          | Conrad & Uriel | Crée à partir de la densité de population |
+
+## 4. Statistiques descriptives univariées: stats
+
+```{r}
+# Unites_legales 
+summary(data$Unites_legales) 
+```
+
+Commentaires: Le nombre d'unités légales par département varie considérablement, allant de 5814 unités à 455 116 unités. Cela suggère une grande disparité entre les départements en termes d'activité légale. Nous soupçonnons que cela est probablement liée à la taille de la population ou à la concentration d'entreprises.
+
+```{r}
+# Taux_activite 
+summary(data$Taux_activite) 
+```
+
+Commentaires: Le taux d'activité dans les départements est relativement élevé, avec un minimum de 68,90% et un maximum de 80,70%. La médiane est de 74,90%, ce qui montre que la moitié des départements ont un taux d'activité supérieur à ce seuil.
+
+```{r}
+# Non_scolarises_15_plus 
+summary(data$Non_scolarises_15_plus)
+```
+
+Commentaires:Le nombre de personnes non scolarisées de 15 ans et plus varie fortement d'un département à l'autre, avec un minimum de 59804 et un maximum de 1844595. Les départements les plus peuplés semblent avoir un nombre bien plus élevé de personnes non scolarisées. Nous confirmerons cela dans la section des statistiques bivariées.
+
+```{r}
+# Menages_imposes 
+summary(data$Menages_imposes)
+```
+
+Commentaires: Le pourcentage de ménages imposés varie également, allant de 31,10% à 70,40%.
+
+```{r}
+# Mediane_niveau_vie 
+summary(data$Mediane_niveau_vie)
+```
+
+Commentaires: Le revenu médian des départements varie de 17070 € à 29730 €, avec une médiane de 22230 €. Cela montre une grande inégalité entre les départements en termes de niveau de vie. Certains départements semblent être plus riches que d'autres.
+
+```{r}
+# Prestations_sociales 
+summary(data$Prestations_sociales)
+```
+
+Commentaires: Les prestations sociales par département varient de 2,40 à 16,10 en pourcentage du revenu, avec une médiane de 5,50 %.
+
+```{r}
+# Pensions_retraites 
+summary(data$Pensions_retraites)
+```
+
+Commentaires: Les pensions de retraite, variant de 15,70 € à 41,30 €, avec une médiane de 31,20 €, suggèrent une certaine disparité dans les montants perçus par les retraités selon les départements. Les départements plus riches peuvent offrir des pensions plus élevées, ce qui contribue à l'écart de niveau de vie entre les régions.
+
+```{r}
+# Taux_pauvrete 
+summary(data$Taux_pauvrete)
+```
+
+Commentaires: Le taux de pauvreté varie considérablement, allant de 9,10% à 36,10%. Cela indique des écarts importants dans la situation économique des départements, certains ayant des niveaux de pauvreté nettement plus élevés que d'autres.
+
+```{r}
+# Densite_population 
+summary(data$Densite_population)
+```
+
+Commentaires: La densité de population varie énormément, de 14,80 habitants par km² à 20 238,2 habitants par km². Cette grande variation montre que les départements qu'on peut qualifier d'urbain sont beaucoup plus densément peuplés que les départements ruraux.
+
+```{r}
+# Cadres 
+summary(data$Cadres)
+```
+
+Commentaires: Le pourcentage de cadres dans les départements varie de 9% à 45,80%. On pourrait émettre comme hypothèse que les départements avec un pourcentage élevé de cadres pourraient indiquer une forte concentration de secteurs tertiaires ou d'entreprises à forte valeur ajoutée, tandis que les départements avec une proportion plus faible de cadres peuvent être dominés par des secteurs industriels ou agricoles.
+
+```{r}
+# Intermediaires 
+summary(data$Intermediaires)
+```
+
+Commentaires: Le pourcentage de professions intermédiaires est relativement stable, allant de 22% à 28,90%. Ces valeurs montrent que les départements présentent une répartition assez homogène de cette catégorie professionnelle.
+
+```{r}
+# Ouvriers 
+summary(data$Ouvriers)
+```
+
+Commentaires: Le pourcentage d'ouvriers varie de 7,40% à 30,30%, indiquant des différences dans la structure professionnelle des départements. Les départements avec un pourcentage plus élevé d'ouvriers peuvent être plus industriels ou agricoles, tandis que ceux avec un pourcentage plus bas peuvent avoir une économie davantage orientée vers les services ou les technologies.
+
+```{r}
+# Taux_chomage 
+summary(data$Taux_chomage)
+```
+
+Commentaires: Le taux de chômage varie de 4,20% à 19,00%, avec une médiane de 6,85%. Cela indique que certains départements connaissent un chômage élevé, tandis que d'autres sont plus favorisés en termes d'emploi.
+
+```{r}
+# Type_zone 
+table(data$Type_zone)
+```
+
+```{r}
+prop.table(table(data$Type_zone))
+```
+
+Commentaires: On dispose de 25,51% de départements ruraux contre 74,48% urbains. On rappelle que le seuil considéré est le premier quartile.
+
+```{r}
+dfSummary(data[, -c(1,2)])
+```
+
+## 4. Statistiques descriptives univariées: Boxplot
+
+```{r, fig.width=10, fig.height=6}
+#on supprime les colonnes  qui ne sont pas intéressantes
+data2<- data[,-c(16, 1,2)]
+
+
+par(mfrow = c(2, 3))  
+
+boxplot(data2$Unites_legales, main = "Unites_legales", col = "skyblue")
+boxplot(data2$Taux_activite, main = "Taux_activite", col = "skyblue")
+boxplot(data2$Non_scolarises_15_plus, main = "Non_scolarises_15_plus", 
+        col = "skyblue")
+
+boxplot(data2$Menages_imposes, main = "Menages_imposes", col = "skyblue")
+boxplot(data2$Mediane_niveau_vie, main = "Mediane_niveau_vie", col = "skyblue")
+boxplot(data2$Prestations_sociales, main = "Prestations_sociales", 
+        col = "skyblue")
+
+par(mfrow = c(2, 4))
+boxplot(data2$Pensions_retraites, main = "Pensions_retraites", col = "skyblue")
+boxplot(data2$Taux_pauvrete, main = "Taux_pauvrete", col = "skyblue")
+boxplot(data2$Densite_population, main = "Densite_population", col = "skyblue")
+
+boxplot(data2$Cadres, main = "Cadres", col = "skyblue")
+boxplot(data2$Intermediaires, main = "Intermediaires", col = "skyblue")
+boxplot(data2$Ouvriers, main = "Ouvriers", col = "skyblue")
+boxplot(data2$Taux_chomage, main = "Taux_chomage", col = "skyblue")
+
+par(mfrow = c(1, 1))
+```
+
+## 5. Statistiques descriptives bivariées
+
+### 5.1. Nuage de points
+
+```{r, fig.width=10, fig.height=6}
+data3 <- data.frame(data)
+graphConso <- function(uneVariable){
+  ggplot(data = data3, aes_string(x = uneVariable, y = "Mediane_niveau_vie")) + 
+    geom_point() + geom_smooth()
+}
+
+
+p1 <- graphConso("Unites_legales")
+p2 <- graphConso("Taux_activite")
+p3 <- graphConso("Non_scolarises_15_plus")
+p4 <- graphConso("Menages_imposes")
+p5 <- graphConso("Prestations_sociales")
+p6 <- graphConso("Pensions_retraites")
+p7 <- graphConso("Taux_pauvrete")
+p8 <- graphConso("Densite_population")
+p9 <- graphConso("Cadres")
+p10 <- graphConso("Intermediaires")
+p11 <- graphConso("Ouvriers")
+p12 <- graphConso("Taux_chomage")
+
+
+grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, ncol = 3)
+
+# Appliquons un logarithme aux variables: population, prestations sociales et 
+# Unites légales pour mieux observer la distribution
+
+data3$log_Densite_population <- log(data3$Densite_population)
+data3$log_Prestations_sociales <- log(data3$Prestations_sociales)
+data3$log_Unites_legales <- log(data3$Unites_legales)
+
+p11 <- graphConso("log_Unites_legales")
+p55 <- graphConso("log_Prestations_sociales")
+p88 <- graphConso("log_Densite_population")
+
+grid.arrange(p11, p55, p88, ncol = 1)
+
+```
+
+Commentaires:
+
+1.  Les variables avec des relations positives sur le niveau de vie médian sont : Unités légales, Taux d'activité, Ménages imposés, Prestations sociales, Cadres, Intermédiaires. Ces variables sont attendues comme ayant un effet direct et significatif pour augmenter le niveau de vie médian.
+
+2.  Les variables avec des relations négatives sur le niveau de vie médian sont : Pensions retraites, Taux de pauvreté, Ouvriers, Taux de chômage. Ces variables joueront probablement un rôle clé dans la diminution du niveau de vie médian.
+
+3.  On a appliqué un log aux variables densité de population, prestations sociales et Unites légales pour mieux observer la distribution 3.1. Variables avec des relations positives pour les variables différenciées au logarithme : log_Unites_legales et log_Densite_population. Elles devraient avoir un effet direct pour améliorer le niveau de vie médian. 3.2. Variable avec une relation négative : log_Prestations_sociales.
+
+### 5.2. Matrice de corrélation
+
+```{r, fig.width=10, fig.height=6}
+df <- subset(data3, select = -c(Code, Departement, Type_zone, 
+                                log_Densite_population, log_Prestations_sociales
+                                , log_Unites_legales, Non_scolarises_15_plus
+                                , Taux_activite))
+
+#Matrice de corrélation
+corrplot(cor(df), method="number")
+
+```
+
+Commentaires:
+
+1.Corrélations fortes et positives : - Unites_legales et Non_scolarises_15_plus (0.85) : Les deux variables montrent une corrélation très positive, suggérant qu'une augmentation du nombre d'unités légales est liée à une proportion plus élevée de non-scolarisés de 15 ans et plus. - Menages_imposes et Mediane_niveau_vie (0.91) : Un lien très fort existe entre ces deux variables, ce qui est attendu, car des ménages imposés sont souvent liés à des niveaux de vie plus élevés. - Prestations_sociales et Taux_chomage (0.87) : Une forte corrélation entre ces deux variables montre que les prestations sociales augmentent dans les zones où le chômage est élevé.
+
+2.Corrélations fortes et négatives : - Taux_pauvrete et Taux_activite (-0.72) : Les zones ayant des taux d'activité élevés semblent avoir des taux de pauvreté plus faibles. - Prestations_sociales et Mediane_niveau_vie (-0.78) : Dans les zones où la médiane du niveau de vie est élevée, les prestations sociales sont généralement plus faibles - Cadres et Ouvriers (-0.74) : Une forte relation négative, montrant qu'une proportion plus élevée de cadres est associée à une proportion plus faible d'ouvriers.
+
+### 5.3. Répartition des variables selon le type de zone (Type_zone).
+
+```{r, fig.width=10, fig.height=6}
+
+analyser_variable <- function(data, variable_type_zone, variables_quanti) {
+  # Stocker les graphiques et résultats pour affichage ultérieur
+  graphiques <- list()
+  resultats <- list()
+  
+  for (var in variables_quanti) {
+    if (is.numeric(data[[var]])) {
+      
+      formule <- as.formula(paste(var, "~", variable_type_zone))
+      modele <- aov(formule, data = data)
+      resultats[[var]] <- summary(modele)
+      
+      # Créer un boxplot pour visualiser les différences
+      p <- ggplot(data, aes_string(x = variable_type_zone, y = var, 
+                                   fill = variable_type_zone)) +
+        geom_boxplot() +
+        labs(
+          #title = paste("Distribution de", var, "par", variable_type_zone),
+          x = "Type de zone",
+          y = var
+        ) +
+        theme_minimal() +
+        theme(legend.position = "none")  
+      graphiques[[var]] <- p
+    } else {
+      cat(paste("Variable ignorée (non quantitative) :", var, "\n"))
+    }
+  }
+  
+  # Afficher les graphiques 3 par 3
+  if (length(graphiques) > 0) {
+    n <- length(graphiques)
+    plots_par_page <- 8
+    for (i in seq(1, n, by = plots_par_page)) {
+      grid.arrange(
+        grobs = graphiques[i:min(i + plots_par_page - 1, n)], 
+        nrow = 2, 
+        ncol = 4
+      )
+    }
+  }
+  
+  return(resultats)
+}
+
+
+
+mes_var_quanti <- c(names(df))
+resultats_anova <- analyser_variable(data3, "Type_zone", mes_var_quanti)
+
+# Focus sur le niveau de vie, la densité de population et les unites légales
+resultats_anova <- analyser_variable(data3, "Type_zone", c("Mediane_niveau_vie", 
+                                        "Unites_legales", "Densite_population"))
+
+```
+
+Commentaires:
+
+1.  Médiane du niveau de vie Les zones urbaines montrent une médiane du niveau de vie significativement plus élevée que les zones rurales. Les valeurs moyennes et les quartiles supérieurs dans les zones urbaines sont bien au-dessus de celles des zones rurales. Quelques zones urbaines présentent des niveaux de vie exceptionnellement élevés, mais les zones rurales n’ont presque pas de valeurs extrêmes.
+
+2.  Unités légales Le nombre d’unités légales (entreprises, établissements, etc.) est beaucoup plus élevé dans les zones urbaines que dans les zones rurales. Les zones rurales affichent des valeurs presque nulles ou très faibles. Dans les zones urbaines, les valeurs présentent une très grande variabilité, avec des outliers représentant des zones densément industrielles ou commerciales.
+
+3.  Densité de population Les zones urbaines ont une densité de population largement supérieure à celle des zones rurales. Les zones rurales affichent des densités proches de zéro, tandis que les zones urbaines présentent une large dispersion. Quelques zones urbaines sont extrêmement densément peuplées, ce qui pourrait correspondre à des grandes métropoles.
+
+## Estimation du modèle complet
+
+Mediane_niveau_vie_i = B0 + B1 Unites_legales_i + B2 Menages_imposes_i + B3 Prestations_sociales_i + B4 Pensions_retraites_i + B5 Taux_pauvrete_i + B6 Densite_population_i + B7 Cadres_i + B8 Intermediaires_i + B9 Ouvriers_i + B10 Taux_chomage_i + B11 Type_zone + B12 RegionParisienne + e_i
+
+```{r}
+modele1 <- lm(Mediane_niveau_vie ~ Unites_legales 
+             + Menages_imposes + Prestations_sociales + Pensions_retraites 
+             + Taux_pauvrete + Densite_population + Cadres + Intermediaires 
+             + Ouvriers + Taux_chomage + Type_zone + RegionParisienne
+             , data = data3)
+summary(modele1)
+
+```
+
+Quelle est la qualité d’ajustement du modèle ? (R2aj)
+
+On interprète seulement le R2 ajusté car il s'agit d'un régression multiple: 93,79 % de la variance des Revenu Médian des départements est expliquée par le modèle.
+
+Le modèle est-il globalement satisfaisant ? (Test de Fisher global)
+
+On utilise le test de Fisher : H0 : tous les coefficients sont nuls saus la constante, c'est à dire B1 = B2 = B3 = B4 = B5 = B6 = B7 = B8 = B9 = B10 = B11 = B12 = B13
+
+la statique du test de Fisher Fobs = 115,1 et la p-value: \< 2.2e-16 \<0.05 (5%) donc on rejette l'hypothèse nulle, il y a au moins un coefficient différent de zéro, conclusion le modèle est globalement satisfaisant.
+
+## Estimation du modèle niveau-log
+
+Mediane_niveau_vie_i = B0 + B1 log(Unites_legales)\_i + B2 Menages_imposes_i + B3 log(Prestations_sociales)\_i + B4 Pensions_retraites_i + B5 Taux_pauvrete_i + B6 Densite_population_i + B7 Cadres_i + B8 Intermediaires_i + B9 Ouvriers_i + B10 Taux_chomage_i + B11 Type_zone + B12 RegionParisienne + e_i
+
+```{r}
+modele2 <- lm(Mediane_niveau_vie ~ log(Unites_legales) 
+              + Menages_imposes + log(Prestations_sociales) + Pensions_retraites 
+              + Taux_pauvrete + log(Densite_population) + Cadres 
+              + Intermediaires + Ouvriers + Taux_chomage + RegionParisienne + Type_zone, 
+              data = data3)
+summary(modele2)
+
+```
+
+Quelle est la qualité d’ajustement du modèle ? (R2aj)
+
+On interprète seulement le R2 ajusté car il s'agit d'un régression multiple: 95,93 % de la variance des Revenu Médian des départements est expliquée par le modèle.
+
+Le modèle est-il globalement satisfaisant ? (Test de Fisher global)
+
+On utilise le test de Fisher : H0 : tous les coefficients sont nuls saus la constante, c'est à dire B1 = B2 = B3 = B4 = B5 = B6 = B7 = B8 = B9 = B10 = B11 = B12 = B13
+
+la statique du test de Fisher Fobs = 175,3 et la p-value: \< 2.2e-16 \<0.05 (5%) donc on rejette l'hypothèse nulle, il y a au moins un coefficient différent de zéro, conclusion le modèle est globalement satisfaisant.
+
+## Estimation du modèle log-log
+
+log(Mediane_niveau_vie)\_i = B0 + B1 log(Unites_legales)\_i + B2 Menages_imposes_i + B3 log(Prestations_sociales)\_i + B4 Pensions_retraites_i + B5 Taux_pauvrete_i + B6 Densite_population_i + B7 Cadres_i + B8 Intermediaires_i + B9 Ouvriers_i + B10 Taux_chomage_i + B11 Type_zone + B12 RegionParisienne + e_i
+
+```{r}
+modele3 <- lm(log(Mediane_niveau_vie) ~ log(Unites_legales) 
+              + Menages_imposes 
+              + log(Prestations_sociales) + Pensions_retraites + Taux_pauvrete 
+              + log(Densite_population) + Cadres + Intermediaires + Ouvriers 
+              + Taux_chomage + RegionParisienne + Type_zone, data = data3)
+summary(modele3)
+```
+
+Quelle est la qualité d’ajustement du modèle ? (R2aj)
+
+On interprète seulement le R2 ajusté car il s'agit d'un régression multiple: 96,32 % de la variance des Revenu Médian des départements est expliquée par le modèle.
+
+Le modèle est-il globalement satisfaisant ? (Test de Fisher global)
+
+On utilise le test de Fisher : H0 : tous les coefficients sont nuls saus la constante, c'est à dire B1 = B2 = B3 = B4 = B5 = B6 = B7 = B8 = B9 = B10 = B11 = B12 = B13
+
+la statique du test de Fisher Fobs = 194,5 et la p-value: \< 2.2e-16 \<0.05 (5%) donc on rejette l'hypothèse nulle, il y a au moins un coefficient différent de zéro, conclusion le modèle est globalement satisfaisant.
+
+CONCLUSION : Les trois premiers modèles estimés sont tous significatifs, et il ressort que le modèle 3 est le meilleur modèle car il a le R2 ajusté le plus élevé.
+
+## TEST DE WHITE: DETECTION D'HETEROSCEDASTICITE
+
+Le graphique de la racine carée des valeurs absolues des résidus standardisés selon les valeurs approximées (“Scale-Location”) peut être utilisé également pour vérifier visuellement l’hypothèse d’égale variance (également appelée homoscédasticité) des résidus.
+
+Si la ligne rouge est à peu près horizontale sur le tracé, l’hypothèse d’homoscédasticité est vraisemblablement satisfaite. Une ligne de pente positive indique une augmentation de la variance avec les valeurs de X et une ligne de pente négative indique une diminution de la variance avec les valeurs de X
+
+```{r}
+
+plot(modele3, which = 3)
+
+
+# analyse graphiques des résidus pour détecter un problème d'hétéroscédasticité.
+residM = residuals(modele3)
+residM2 = residM^2
+Fitted_Y = fitted(modele3)
+
+
+# graphique des résidus
+# détection graphique des résidus
+plot(residM~Fitted_Y, data=data3, main="héteroscedasticité / Y estimé ?" )
+
+# graphique des résidus en fonction de variable explicative
+plot(residM ~ log(Unites_legales), data=data3
+     , main="héteroscedasticité / en fonction du nombre d'unité légales ?" )
+plot(residM ~ Menages_imposes, data=data3
+     , main="héteroscedasticité / en fonction de la part de menages fiscaux ?" )
+plot(residM ~ log(Prestations_sociales), data=data3, main="héteroscedasticité / 
+     en fonction de la part des PS dans le revenu disponible ?" )
+plot(residM ~ Pensions_retraites, data=data3, main="héteroscedasticité / 
+     en fonction de la part des pensions dans le revenu dispo ?" )
+plot(residM ~ Taux_pauvrete, data=data3
+     , main="héteroscedasticité / en fonction du taux de pauvreté ?" )
+plot(residM ~ log(Densite_population), data=data3, main="héteroscedasticité / 
+     en fonction de la densité de population ?" )
+plot(residM ~ Cadres, data=data3
+     , main="héteroscedasticité / en fonction de la part des cadres  ?" )
+plot(residM ~ Intermediaires, data=data3, main="héteroscedasticité / 
+     en fonction de la part de profession intermédiaires ?" )
+plot(residM ~ Ouvriers, data=data3
+     , main="héteroscedasticité / en fonction de la part des ouvriers ?" )
+plot(residM ~ Taux_chomage, data=data3
+     , main="héteroscedasticité / en fonction du taux de chomage ?" )
+plot(residM ~ RegionParisienne, data=data3, main="héteroscedasticité / 
+     en fonction de l'indicatrice RegionParisienne ?" )
+
+# TEST
+bptest(modele3)
+dwtest(modele3)
+gqtest(modele3, order.by = ~ RegionParisienne , fraction = 6, data = data3)
+
+
+```
+
+H0 : Homoscédasticité VS H1: Hétéroscédasticité 
+p-value < 5%. On rejette donc l'hypothèse d'homoscédasticité. 
+
+## ANALYSE DES RESIDUS
+
+### Tracé des résidus standarisés
+
+```{r}
+plot(modele3$residuals)
+
+plot(fitted(modele3), rstandard(modele3)) # Tracé des résidus standardisés
+abline(h = 0, col = "red")
+
+```
+
+### Représentation graphiques des résidus
+
+```{r}
+#utilisation des fonctions du package olsrr
+
+ols_plot_resid_qq(modele3)       # Graphique quantile-quantile des résidus
+ols_plot_resid_hist(modele3)     # Histogramme des résidus
+ols_plot_resid_box(modele3)      # Boite à moustache des résidus
+
+# Visualisation des résultats d'une estimation :
+
+# plot.lm function package stats = 4 graphiques pour une estimation par MCO
+plot(modele3)
+#Residual vs fitted
+plot(modele3, which = 1)
+#normal QQplot
+plot(modele3, which=2)
+```
+
+### Identification des points influants
+
+Distance de Cook: mesure l'influence d'une observation, les valeurs supérieures à 1 ou parfois à 0,5 indique un point influent
+
+```{r}
+plot(modele3, which = 4)
+```
+
+
+Un autre graphique très utile pour le diagnostic d’un éventuel point influent sur la droite de régression est le graphique des résidus standardisés selon leur levier (“Residual vs Leverage”) sur lequel on superpose les limites pour la distance de Cook. Leverage = éléments diagonaux de H = X(X'X)-1X'  Si un point sur ce graphique se situe en dehors de l’intervalle définit par les lignes en pointillées, il s’agit d’une observation influente. 
+
+```{r}
+plot(modele3, which = 5)
+```
+
+On constate que l'individus 94 est influants et pourrait donc influencer la robusteste de notre modèle.
+
+## TEST DE MOYENNE ET DE NORMALITE
+
+```{r}
+
+# moyennes = 0
+# Test (H0: moyenne résidus = 0; H1: moyenne résidus <> 0)
+t.test(modele3$residuals)
+```
+la moyenne estimé est de -4.459018e-15, l'intervalle de confiance contient la valeur nulle et la pvalue du test =1, au seuil de significativité de 0.1% on ne peut pas rejeter l’hypothèse que la moyenne des résidus soit nulle
+
+# Test de normalité
+
+```{r}
+shapiro.test(modele3$residuals)
+```
+H0 : Normalité VS H1: Autre distribution 
+p-value < 5%. On rejette donc l'hypothèse de normalité
+
+
+## Estimation robuste à l'hétéroscédasticité
+
+Modèle avec la méthode des MCO tout en corrigeant le calcul de la matrice de variance covariance des paramètres (correction de white)
+
+```{r}
+vcov(modele3) ## matrice variance covariance avec MCO
+#fonction hccm pour recalculer la matrice de var-cov avec la correction hc0
+#la correction hc0 correspond à la simple correction de white
+
+cov_robuste_hc0 <- hccm(modele3, type="hc0")  
+reg_robuste_hc0= coeftest(modele3, vcov = cov_robuste_hc0)
+
+#affichage des modèles avec le package stargazer
+stargazer(modele3, reg_robuste_hc0,
+  title="Comparaison de l'estimation MCO et MCO correction WHITE",
+  type="text", 
+  digits=3, 
+  column.labels=c("MCO","MCOWhite"),
+  dep.var.labels.include = FALSE,
+  model.numbers = FALSE,
+  dep.var.caption="Variable dépendante : 'Médiane_niveau_vie'",
+  model.names=FALSE) 
+```
+
+
+## Estimation robuste à l'hétéroscédasticité et à l'autocorrelation
+
+```{r}
+#fonction vcovHAC = correnection de Newey et West = librairie sandwich
+
+cov_robuste_HAC <- vcovHAC(modele3)
+cov_robuste_HAC
+reg_robuste_HAC= coeftest(modele3, vcov = cov_robuste_HAC)
+
+#affichage des modèles avec le package stargazer
+stargazer(modele3, reg_robuste_hc0, reg_robuste_HAC, 
+  title="Comparaison de l'estimation MCO eavec différentes 
+  corrections de la matrice de var_cov",
+  type="text", 
+  digits=3, 
+  column.labels=c("MCO","MCOWhite", "MCONewey"),
+  dep.var.labels.include = FALSE,
+  model.numbers = FALSE,
+  dep.var.caption="Variable dépendante : 'Médiane_niveau_vie'",
+  model.names=FALSE) 
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
