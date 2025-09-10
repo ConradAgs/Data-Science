@@ -38,19 +38,11 @@ def import_json_from_drive(url):
     return None
 
 def load_npy_from_drive(url):
-    """Charge un fichier .npy depuis Google Drive"""
+    """Charge un fichier .npy depuis Google Drive avec allow_pickle=True"""
     content = download_file_from_drive(url)
     if content:
-        return np.load(BytesIO(content))
+        return np.load(BytesIO(content), allow_pickle=True)
     return None
-
-# =======================
-# Fonctions
-# =======================
-def import_json(json_path):
-    with open(json_path, "r", encoding="utf-8") as fp:
-        data = json.load(fp)
-    return data
 
 # =======================
 # Configuration de la page
@@ -107,7 +99,6 @@ st.markdown("""
         background-color: #cccccc;
         color: #666666;
     }
-    /* Styles pour améliorer la stabilité */
     .block-container {
         padding-top: 2rem;
         padding-bottom: 2rem;
@@ -156,7 +147,6 @@ def display_offers_page():
     for i in range(start_idx, end_idx):
         offer = st.session_state.current_results[i]
 
-        # Utiliser du HTML/CSS pour un affichage plus esthétique
         st.markdown(f"""
         <div class="offer-card">
             <div class="offer-title">{offer['title']}</div>
@@ -165,7 +155,6 @@ def display_offers_page():
         </div>
         """, unsafe_allow_html=True)
 
-    # Information sur la pagination
     st.markdown(f"""
     <div class="pagination-info">
         Page {current_page + 1} sur {total_pages}
@@ -184,35 +173,19 @@ def display_pagination_controls():
     col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
 
     with col1:
-        st.button("⏪ Première",
-                 disabled=current_page == 0,
-                 on_click=go_to_first_page,
-                 key="first_page_btn",
-                 use_container_width=True)
+        st.button("⏪ Première", disabled=current_page == 0, on_click=go_to_first_page, use_container_width=True)
 
     with col2:
-        st.button("◀️ Précédente",
-                 disabled=current_page == 0,
-                 on_click=go_to_previous_page,
-                 key="prev_page_btn",
-                 use_container_width=True)
+        st.button("◀️ Précédente", disabled=current_page == 0, on_click=go_to_previous_page, use_container_width=True)
 
     with col3:
-        st.button("Suivante ▶️",
-                 disabled=current_page >= total_pages - 1,
-                 on_click=go_to_next_page,
-                 key="next_page_btn",
-                 use_container_width=True)
+        st.button("Suivante ▶️", disabled=current_page >= total_pages - 1, on_click=go_to_next_page, use_container_width=True)
 
     with col4:
-        st.button("Dernière ⏩",
-                 disabled=current_page >= total_pages - 1,
-                 on_click=go_to_last_page,
-                 key="last_page_btn",
-                 use_container_width=True)
+        st.button("Dernière ⏩", disabled=current_page >= total_pages - 1, on_click=go_to_last_page, use_container_width=True)
 
 # =======================
-# Chargement des fichiers
+# Application principale
 # =======================
 def main():
     st.title("💼 RecrutoBot")
@@ -234,7 +207,7 @@ def main():
     if "offers_emb" not in st.session_state:
         st.session_state.offers_emb = None
 
-    # Chargement des données (une seule fois)
+    # Chargement des données
     if not st.session_state.data_loaded:
         with st.spinner("Chargement des données depuis Google Drive..."):
             try:
@@ -245,7 +218,7 @@ def main():
                     st.error("❌ Impossible de charger les embeddings depuis Google Drive")
                     return
                 
-                st.session_state.offers_emb = torch.tensor(embeddings_data)
+                st.session_state.offers_emb = torch.tensor(embeddings_data, dtype=torch.float32)
                 
                 # Charger le modèle
                 st.info("🤖 Chargement du modèle...")
@@ -272,36 +245,25 @@ def main():
             {"role": "assistant", "content": "Bonjour ! Je suis votre assistant pour la recherche d'emploi. Comment puis-je vous aider ?"}
         ]
 
-    # Afficher l'historique des messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Afficher les résultats de la recherche actuelle si elle existe
     if st.session_state.current_results:
         with st.chat_message("assistant"):
-            # Afficher le message de recherche
             if st.session_state.last_search:
                 st.markdown(f"Voici les offres correspondant à votre recherche '{st.session_state.last_search}':")
-
-            # Afficher les offres
             display_offers_page()
-
-        # Afficher les contrôles de pagination (en dehors du chat message)
         display_pagination_controls()
 
-    # Input utilisateur
     if prompt := st.chat_input("Ex: 'Développeur Python junior à Paris'"):
-        # Ajouter le message utilisateur à l'historique
         st.session_state.messages.append({"role": "user", "content": prompt})
-        st.session_state.page_number = 0  # Réinitialiser la pagination
-        st.session_state.last_search = prompt  # Stocker la dernière recherche
+        st.session_state.page_number = 0
+        st.session_state.last_search = prompt
 
-        # Afficher le message utilisateur
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Traiter la recherche
         with st.chat_message("assistant"):
             with st.spinner("🔍 Recherche en cours..."):
                 try:
@@ -311,13 +273,8 @@ def main():
                         st.session_state.messages.append({"role": "assistant", "content": error_msg})
                         st.session_state.current_results = []
                     else:
-                        # Encoder la requête
                         query_emb = st.session_state.model.encode(prompt, convert_to_tensor=True)
-
-                        # Similarité cosinus
                         cos_scores = util.cos_sim(query_emb, st.session_state.offers_emb)[0]
-
-                        # Filtrer les résultats avec un score > 0.3
                         good_indices = [i for i, score in enumerate(cos_scores) if score > 0.4]
 
                         if not good_indices:
@@ -326,7 +283,6 @@ def main():
                             st.session_state.messages.append({"role": "assistant", "content": no_results_msg})
                             st.session_state.current_results = []
                         else:
-                            # Stocker les résultats dans la session state
                             st.session_state.current_results = []
                             for i in good_indices:
                                 score = cos_scores[i]
@@ -339,16 +295,9 @@ def main():
                                     "score": float(score)
                                 })
 
-                            # Trier par score décroissant
                             st.session_state.current_results.sort(key=lambda x: x["score"], reverse=True)
-
-                            # Afficher le message de résultats
                             st.markdown(f"Voici les offres correspondant à votre recherche '{prompt}':")
-
-                            # Afficher la première page
                             display_offers_page()
-
-                            # Ajouter le message à l'historique
                             results_count = len(st.session_state.current_results)
                             st.session_state.messages.append({
                                 "role": "assistant",
