@@ -4,6 +4,45 @@ import numpy as np
 from sentence_transformers import SentenceTransformer, util
 import streamlit as st
 import os
+import requests
+from io import BytesIO
+import time
+
+# =======================
+# URLs des fichiers sur Google Drive
+# =======================
+EMBEDDINGS_DRIVE_URL = "https://drive.google.com/file/d/16LJE9fzGhbnM6ydlGL0pYW4ammaahGX1/view?usp=drive_link"
+JOBS_DRIVE_URL = "https://drive.google.com/file/d/1aWcq2k1uttNFfk4btxOLkPB-vf4UnGgH/view?usp=drive_link"
+
+# =======================
+# Fonctions de téléchargement
+# =======================
+def download_file_from_drive(url, max_retries=3):
+    """Télécharge un fichier depuis Google Drive avec gestion des erreurs"""
+    for attempt in range(max_retries):
+        try:
+            session = requests.Session()
+            response = session.get(url, stream=True, timeout=30)
+            response.raise_for_status()
+            return response.content
+        except requests.exceptions.RequestException as e:
+            st.warning(f"Tentative {attempt + 1}/{max_retries} échouée: {e}")
+            time.sleep(2)
+    return None
+
+def import_json_from_drive(url):
+    """Charge un JSON depuis Google Drive"""
+    content = download_file_from_drive(url)
+    if content:
+        return json.loads(content.decode('utf-8'))
+    return None
+
+def load_npy_from_drive(url):
+    """Charge un fichier .npy depuis Google Drive"""
+    content = download_file_from_drive(url)
+    if content:
+        return np.load(BytesIO(content))
+    return None
 
 # =======================
 # Fonctions
@@ -197,29 +236,34 @@ def main():
 
     # Chargement des données (une seule fois)
     if not st.session_state.data_loaded:
-        with st.spinner("Chargement des données..."):
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-
-            # Charger les fichiers avec les chemins absolus
+        with st.spinner("Chargement des données depuis Google Drive..."):
             try:
-                embeddings_path = os.path.join(current_dir, "embedding_modele1.npy")
-                jobs_path = os.path.join(current_dir, "jobs_catalogue.json")
-
-                # Vérifier si les fichiers existent
-                if not os.path.exists(embedding_path) or not os.path.exists(json_path):
-                    st.error("Fichiers de données non trouvés. Veuillez vérifier que embedding_modele1.npy et jobs_catalogue.json sont présents.")
+                # Charger les embeddings
+                st.info("📥 Téléchargement des embeddings...")
+                embeddings_data = load_npy_from_drive(EMBEDDINGS_DRIVE_URL)
+                if embeddings_data is None:
+                    st.error("❌ Impossible de charger les embeddings depuis Google Drive")
                     return
-
-                st.session_state.offers_emb = np.load(embedding_path)
-                st.session_state.offers_emb = torch.tensor(st.session_state.offers_emb)
+                
+                st.session_state.offers_emb = torch.tensor(embeddings_data)
+                
+                # Charger le modèle
+                st.info("🤖 Chargement du modèle...")
                 st.session_state.model = SentenceTransformer("all-mpnet-base-v2", device="cpu")
-
-                offers_dict = import_json(json_path)
+                
+                # Charger les offres d'emploi
+                st.info("📋 Téléchargement des offres d'emploi...")
+                offers_dict = import_json_from_drive(JOBS_DRIVE_URL)
+                if offers_dict is None:
+                    st.error("❌ Impossible de charger les offres d'emploi depuis Google Drive")
+                    return
+                
                 st.session_state.offers = list(offers_dict.values())
                 st.session_state.data_loaded = True
+                st.success("✅ Données chargées avec succès!")
 
             except Exception as e:
-                st.error(f"Erreur lors du chargement des données: {str(e)}")
+                st.error(f"❌ Erreur lors du chargement des données: {str(e)}")
                 return
 
     # Interface chat
