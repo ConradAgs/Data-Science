@@ -12,8 +12,8 @@ import traceback
 # Configuration des fichiers Google Drive
 # =======================
 files = {
-    "embedding_modele1.npy": "16LJE9fzGhbnM6ydlGL0pYW4ammaahGX1",  # Remplacez par votre vrai ID
-    "jobs_catalogue.json": "1aWcq2k1uttNFfk4btxOLkPB-vf4UnGgH"       # Remplacez par votre vrai ID
+    "embedding_modele1.npy": "16LJE9fzGhbnM6ydlGL0pYW4ammaahGX1",
+    "jobs_catalogue.json": "1aWcq2k1uttNFfk4btxOLkPB-vf4UnGgH"
 }
 
 # =======================
@@ -95,7 +95,6 @@ st.markdown("""
         background-color: #cccccc;
         color: #666666;
     }
-    /* Styles pour améliorer la stabilité */
     .block-container {
         padding-top: 2rem;
         padding-bottom: 2rem;
@@ -143,8 +142,6 @@ def display_offers_page():
 
     for i in range(start_idx, end_idx):
         offer = st.session_state.current_results[i]
-
-        # Utiliser du HTML/CSS pour un affichage plus esthétique
         st.markdown(f"""
         <div class="offer-card">
             <div class="offer-title">{offer['title']}</div>
@@ -153,7 +150,6 @@ def display_offers_page():
         </div>
         """, unsafe_allow_html=True)
 
-    # Information sur la pagination
     st.markdown(f"""
     <div class="pagination-info">
         Page {current_page + 1} sur {total_pages}
@@ -175,28 +171,28 @@ def display_pagination_controls():
         st.button("⏪ Première",
                  disabled=current_page == 0,
                  on_click=go_to_first_page,
-                 key="first_page_btn",
+                 key=f"first_page_btn_{st.session_state.last_search}",
                  use_container_width=True)
 
     with col2:
         st.button("◀️ Précédente",
                  disabled=current_page == 0,
                  on_click=go_to_previous_page,
-                 key="prev_page_btn",
+                 key=f"prev_page_btn_{st.session_state.last_search}",
                  use_container_width=True)
 
     with col3:
         st.button("Suivante ▶️",
                  disabled=current_page >= total_pages - 1,
                  on_click=go_to_next_page,
-                 key="next_page_btn",
+                 key=f"next_page_btn_{st.session_state.last_search}",
                  use_container_width=True)
 
     with col4:
         st.button("Dernière ⏩",
                  disabled=current_page >= total_pages - 1,
                  on_click=go_to_last_page,
-                 key="last_page_btn",
+                 key=f"last_page_btn_{st.session_state.last_search}",
                  use_container_width=True)
 
 # =======================
@@ -268,15 +264,15 @@ def main():
 
     # Afficher les résultats de la recherche actuelle si elle existe
     if st.session_state.current_results:
+        # Afficher le message de recherche dans le chat
         with st.chat_message("assistant"):
-            # Afficher le message de recherche
             if st.session_state.last_search:
                 st.markdown(f"Voici les offres correspondant à votre recherche '{st.session_state.last_search}':")
-
-            # Afficher les offres
-            display_offers_page()
-
-        # Afficher les contrôles de pagination (en dehors du chat message)
+        
+        # Afficher les offres (en dehors du chat pour éviter les problèmes de rendu)
+        display_offers_page()
+        
+        # Afficher les contrôles de pagination
         display_pagination_controls()
 
     # Input utilisateur
@@ -349,6 +345,9 @@ def main():
                     st.markdown(error_msg)
                     st.session_state.messages.append({"role": "assistant", "content": error_msg})
                     st.session_state.current_results = []
+
+        # Forcer le rafraîchissement pour afficher les boutons
+        st.rerun()
 
 if __name__ == "__main__":
     main()
