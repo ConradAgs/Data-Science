@@ -198,10 +198,12 @@ def main():
     # Chargement des données (une seule fois)
     if not st.session_state.data_loaded:
         with st.spinner("Chargement des données..."):
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+
+            # Charger les fichiers avec les chemins absolus
             try:
-                # Utiliser des chemins relatifs pour le déploiement
-                embedding_path = "embedding_modele1.npy"
-                json_path = "jobs_catalogue.json"
+                embeddings_path = os.path.join(current_dir, "embedding_modele1.npy")
+                jobs_path = os.path.join(current_dir, "jobs_catalogue.json")
 
                 # Vérifier si les fichiers existent
                 if not os.path.exists(embedding_path) or not os.path.exists(json_path):
