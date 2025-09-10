@@ -25,19 +25,22 @@ def import_json(json_path):
     return data
 
 def download_files():
-    """Télécharge les fichiers depuis Google Drive si ils n'existent pas localement"""
+    """Télécharge toujours les fichiers depuis Google Drive"""
     for filename, file_id in files.items():
-        if not os.path.exists(filename):
-            try:
-                st.info(f"📥 Téléchargement de {filename}...")
-                url = f"https://drive.google.com/uc?export=download&id={file_id}"
-                gdown.download(url, filename, quiet=False)
-                st.success(f"✅ {filename} téléchargé avec succès")
-            except Exception as e:
-                st.error(f"❌ Erreur lors du téléchargement de {filename}: {e}")
-                return False
-        else:
-            st.write(f"📁 {filename} déjà présent localement")
+        try:
+            st.info(f"📥 Téléchargement de {filename}...")
+            url = f"https://drive.google.com/uc?export=download&id={file_id}"
+            
+            # Supprimer l'ancien fichier pour forcer le téléchargement
+            if os.path.exists(filename):
+                os.remove(filename)
+            
+            gdown.download(url, filename, quiet=False)
+            st.success(f"✅ {filename} téléchargé avec succès")
+                
+        except Exception as e:
+            st.error(f"❌ Erreur avec {filename}: {e}")
+            return False
     return True
 
 # =======================
