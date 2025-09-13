@@ -167,7 +167,7 @@ def main():
     # Résultats
     if st.session_state.current_results:
         with st.chat_message("assistant"):
-            st.markdown(f"Voici les offres correspondant à '{st.session_state.last_search}':")
+            st.markdown(f"Voici les offres correspondantes :")
         display_offers_page()
         display_pagination_controls()
 
