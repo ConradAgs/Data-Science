@@ -12,8 +12,8 @@ import traceback
 # Configuration des fichiers Google Drive
 # =======================
 files = {
-    "embedding.npy": "16LJE9fzGhbnM6ydlGL0pYW4ammaahGX1",
-    "jobs_catalogue2.json": "1aWcq2k1uttNFfk4btxOLkPB-vf4UnGgH"
+    "embedding.npy": "176y-qT1aYgry5m6hT2dRyEV4J-CcOlKj",
+    "jobs_catalogue2.json": "1gzZCk3mtDXp8Y_siloYpCOJiJVCHY663"
 }
 
 # =======================
@@ -28,7 +28,6 @@ def download_files():
     """Télécharge toujours les fichiers depuis Google Drive"""
     for filename, file_id in files.items():
         try:
-            st.info(f"📥 Téléchargement de {filename}...")
             url = f"https://drive.google.com/uc?export=download&id={file_id}"
 
             # Supprimer l'ancien fichier pour forcer le téléchargement
@@ -36,7 +35,6 @@ def download_files():
                 os.remove(filename)
 
             gdown.download(url, filename, quiet=False)
-            st.success(f"✅ {filename} téléchargé avec succès")
 
         except Exception as e:
             st.error(f"❌ Erreur avec {filename}: {e}")
@@ -231,7 +229,6 @@ def main():
                     return
 
                 # Charger les embeddings
-                st.info("📊 Chargement des embeddings...")
                 embedding = np.load("embedding.npy", allow_pickle=True)
                 st.session_state.offers_emb = torch.tensor(embedding.astype(np.float32))
 
@@ -244,7 +241,6 @@ def main():
                 st.session_state.offers = import_json("jobs_catalogue2.json")
 
                 st.session_state.data_loaded = True
-                st.success("✅ Données chargées avec succès!")
                 st.write(f"📈 {len(st.session_state.offers)} offres chargées")
 
             except Exception as e:
@@ -317,10 +313,10 @@ def main():
                             for i in good_indices:
                                 score = cos_scores[i]
                                 offer = st.session_state.offers[i]
-                                title = offer.get("TITLE") or offer.get("title") or "Titre non disponible"
-                                text = offer.get("SUMMARY") or offer.get("text") or "Description non disponible"
+                                title = offer.get("intitule") or offer.get("intitule") or "Titre non disponible"
+                                text = offer.get("description") or offer.get("description") or "Description non disponible"
                                 st.session_state.current_results.append({
-                                    "title": title,
+                                    "intitule": title,
                                     "description": text,
                                     "score": float(score)
                                 })
