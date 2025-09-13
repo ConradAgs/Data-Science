@@ -12,8 +12,8 @@ import traceback
 # Configuration des fichiers Google Drive
 # =======================
 files = {
-    "embedding_modele1.npy": "16LJE9fzGhbnM6ydlGL0pYW4ammaahGX1",
-    "jobs_catalogue.json": "1aWcq2k1uttNFfk4btxOLkPB-vf4UnGgH"
+    "embedding.npy": "16LJE9fzGhbnM6ydlGL0pYW4ammaahGX1",
+    "jobs_catalogue2.json": "1aWcq2k1uttNFfk4btxOLkPB-vf4UnGgH"
 }
 
 # =======================
@@ -30,14 +30,14 @@ def download_files():
         try:
             st.info(f"📥 Téléchargement de {filename}...")
             url = f"https://drive.google.com/uc?export=download&id={file_id}"
-            
+
             # Supprimer l'ancien fichier pour forcer le téléchargement
             if os.path.exists(filename):
                 os.remove(filename)
-            
+
             gdown.download(url, filename, quiet=False)
             st.success(f"✅ {filename} téléchargé avec succès")
-                
+
         except Exception as e:
             st.error(f"❌ Erreur avec {filename}: {e}")
             return False
@@ -232,9 +232,8 @@ def main():
 
                 # Charger les embeddings
                 st.info("📊 Chargement des embeddings...")
-                embedding = np.load("embedding_modele1.npy", allow_pickle=True)
+                embedding = np.load("embedding.npy", allow_pickle=True)
                 st.session_state.offers_emb = torch.tensor(embedding.astype(np.float32))
-                st.write(f"✅ Embeddings shape: {embedding.shape}")
 
                 # Charger le modèle
                 st.info("🤖 Chargement du modèle...")
@@ -242,9 +241,8 @@ def main():
 
                 # Charger les offres d'emploi
                 st.info("📋 Chargement des offres d'emploi...")
-                offers_dict = import_json("jobs_catalogue.json")
-                st.session_state.offers = list(offers_dict.values())
-                
+                st.session_state.offers = import_json("jobs_catalogue2.json")
+
                 st.session_state.data_loaded = True
                 st.success("✅ Données chargées avec succès!")
                 st.write(f"📈 {len(st.session_state.offers)} offres chargées")
@@ -271,10 +269,10 @@ def main():
         with st.chat_message("assistant"):
             if st.session_state.last_search:
                 st.markdown(f"Voici les offres correspondant à votre recherche '{st.session_state.last_search}':")
-        
+
         # Afficher les offres (en dehors du chat pour éviter les problèmes de rendu)
         display_offers_page()
-        
+
         # Afficher les contrôles de pagination
         display_pagination_controls()
 
