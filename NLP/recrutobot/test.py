@@ -145,7 +145,7 @@ def display_offers_page():
         offer = st.session_state.current_results[i]
         st.markdown(f"""
         <div class="offer-card">
-            <div class="offer-title">{offer['title']}</div>
+            <div class="offer-title">{offer['intitule']}</div>
             <div class="offer-description">{offer['description'][:250]}...</div>
             <div class="offer-score">Pertinence: {offer['score']:.3f}</div>
         </div>
