@@ -20,43 +20,19 @@ files = {
 # =======================
 def import_json(json_path):
     with open(json_path, "r", encoding="utf-8") as fp:
-        data = json.load(fp)
-    return data
+        return json.load(fp)
 
-def download_file_once(filename, file_id):
-    """Télécharge un fichier depuis Google Drive seulement s'il n'existe pas déjà."""
-    if not os.path.exists(filename):
-        url = f"https://drive.google.com/uc?export=download&id={file_id}"
-        gdown.download(url, filename, quiet=False)
-    return filename
-
-# =======================
-# Mise en cache des ressources lourdes
-# =======================
-@st.cache_resource
-def load_model():
-    return SentenceTransformer("all-mpnet-base-v2", device="cpu")
-
-@st.cache_data
-def load_embeddings():
-    path = download_file_once("embedding.npy", files["embedding.npy"])
-    embedding = np.load(path, allow_pickle=True)
-    return torch.tensor(embedding.astype(np.float32))
-
-@st.cache_data
-def load_offers():
-    path = download_file_once("jobs_catalogue2.json", files["jobs_catalogue2.json"])
-    return import_json(path)
-
-# =======================
-# Configuration de la page
-# =======================
-st.set_page_config(
-    page_title="RecrutoBot",
-    page_icon="💼",
-    layout="centered",
-    initial_sidebar_state="collapsed"
-)
+def download_files():
+    """Télécharge les fichiers depuis Google Drive uniquement si absents"""
+    for filename, file_id in files.items():
+        try:
+            if not os.path.exists(filename):
+                url = f"https://drive.google.com/uc?export=download&id={file_id}"
+                gdown.download(url, filename, quiet=False)
+        except Exception as e:
+            st.error(f"❌ Erreur avec {filename}: {e}")
+            return False
+    return True
 
 # =======================
 # Styles CSS personnalisés
@@ -132,7 +108,7 @@ def go_to_last_page():
     st.session_state.page_number = total_pages - 1
 
 # =======================
-# Affichage des offres
+# Affichage
 # =======================
 def display_offers_page():
     if not st.session_state.current_results:
@@ -170,6 +146,7 @@ def display_pagination_controls():
     results_per_page = 5
     total_pages = max(1, (len(st.session_state.current_results) + results_per_page - 1) // results_per_page)
     current_page = st.session_state.page_number
+    counter = st.session_state.search_counter  # compteur unique
 
     col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
 
@@ -177,61 +154,79 @@ def display_pagination_controls():
         st.button("⏪ Première",
                  disabled=current_page == 0,
                  on_click=go_to_first_page,
-                 use_container_width=True)
+                 key=f"first_page_btn_{counter}")
 
     with col2:
         st.button("◀️ Précédente",
                  disabled=current_page == 0,
                  on_click=go_to_previous_page,
-                 use_container_width=True)
+                 key=f"prev_page_btn_{counter}")
 
     with col3:
         st.button("Suivante ▶️",
                  disabled=current_page >= total_pages - 1,
                  on_click=go_to_next_page,
-                 use_container_width=True)
+                 key=f"next_page_btn_{counter}")
 
     with col4:
         st.button("Dernière ⏩",
                  disabled=current_page >= total_pages - 1,
                  on_click=go_to_last_page,
-                 use_container_width=True)
+                 key=f"last_page_btn_{counter}")
 
 # =======================
 # Main
 # =======================
 def main():
     st.title("💼 RecrutoBot")
-    st.markdown("*Version optimisée avec cache (pas de retéléchargement)*")
+    st.markdown("*Version 100% locale sans API externe*")
 
-    # Initialisation session_state
-    if "page_number" not in st.session_state:
-        st.session_state.page_number = 0
-    if "current_results" not in st.session_state:
-        st.session_state.current_results = []
-    if "last_search" not in st.session_state:
-        st.session_state.last_search = ""
-    if "messages" not in st.session_state:
-        st.session_state.messages = [
-            {"role": "assistant", "content": "Bonjour ! Je suis votre assistant pour la recherche d'emploi. Comment puis-je vous aider ?"}
-        ]
+    # Init session_state
+    for key, default in {
+        "page_number": 0,
+        "current_results": [],
+        "last_search": "",
+        "data_loaded": False,
+        "model": None,
+        "offers": [],
+        "offers_emb": None,
+        "messages": [{"role": "assistant", "content": "Bonjour ! Je suis votre assistant pour la recherche d'emploi. Comment puis-je vous aider ?"}],
+        "search_counter": 0
+    }.items():
+        if key not in st.session_state:
+            st.session_state[key] = default
 
-    # Chargement unique des ressources
-    try:
-        model = load_model()
-        offers_emb = load_embeddings()
-        offers = load_offers()
-    except Exception as e:
-        st.error(f"❌ Erreur lors du chargement des données: {str(e)}")
-        st.code(traceback.format_exc())
-        return
+    # Chargement unique des données
+    if not st.session_state.data_loaded:
+        with st.spinner("Chargement des données..."):
+            try:
+                if not download_files():
+                    st.error("❌ Impossible de télécharger les fichiers nécessaires")
+                    return
 
-    # Afficher l'historique du chat
+                embedding = np.load("embedding.npy", allow_pickle=True)
+                st.session_state.offers_emb = torch.tensor(embedding.astype(np.float32))
+
+                st.info("🤖 Chargement du modèle...")
+                st.session_state.model = SentenceTransformer("all-mpnet-base-v2", device="cpu")
+
+                st.info("📋 Chargement des offres d'emploi...")
+                st.session_state.offers = import_json("jobs_catalogue2.json")
+
+                st.session_state.data_loaded = True
+                st.success(f"📈 {len(st.session_state.offers)} offres chargées")
+
+            except Exception as e:
+                st.error(f"❌ Erreur lors du chargement des données: {str(e)}")
+                st.code(traceback.format_exc())
+                return
+
+    # Afficher messages du chat
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Afficher les résultats si dispo
+    # Afficher résultats actuels
     if st.session_state.current_results:
         with st.chat_message("assistant"):
             if st.session_state.last_search:
@@ -245,6 +240,7 @@ def main():
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.session_state.page_number = 0
         st.session_state.last_search = prompt
+        st.session_state.search_counter += 1  # incrément unique
 
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -252,13 +248,9 @@ def main():
         with st.chat_message("assistant"):
             with st.spinner("🔍 Recherche en cours..."):
                 try:
-                    # Encoder la requête
-                    query_emb = model.encode(prompt, convert_to_tensor=True)
+                    query_emb = st.session_state.model.encode(prompt, convert_to_tensor=True)
+                    cos_scores = util.cos_sim(query_emb, st.session_state.offers_emb)[0]
 
-                    # Similarité cosinus (conversion en numpy)
-                    cos_scores = util.cos_sim(query_emb, offers_emb)[0].cpu().numpy()
-
-                    # Filtrer les résultats > 0.4
                     good_indices = [i for i, score in enumerate(cos_scores) if score > 0.4]
 
                     if not good_indices:
@@ -270,36 +262,32 @@ def main():
                         st.session_state.current_results = []
                         for i in good_indices:
                             score = cos_scores[i]
-                            offer = offers[i]
-                            title = offer.get("intitule") or "Titre non disponible"
-                            text = offer.get("description") or "Description non disponible"
+                            offer = st.session_state.offers[i]
+                            title = offer.get("intitule", "Titre non disponible")
+                            text = offer.get("description", "Description non disponible")
                             st.session_state.current_results.append({
                                 "intitule": title,
                                 "description": text,
                                 "score": float(score)
                             })
 
-                        # Trier par score décroissant
                         st.session_state.current_results.sort(key=lambda x: x["score"], reverse=True)
 
-                        # Message résumé
+                        st.markdown(f"Voici les offres correspondant à votre recherche '{prompt}':")
+                        display_offers_page()
+                        display_pagination_controls()
+
                         results_count = len(st.session_state.current_results)
                         st.session_state.messages.append({
                             "role": "assistant",
                             "content": f"J'ai trouvé {results_count} offres correspondant à '{prompt}'"
                         })
 
-                        # ⚡️ Afficher immédiatement résultats + boutons
-                        st.markdown(f"Voici les offres correspondant à votre recherche '{prompt}':")
-                        display_offers_page()
-                        display_pagination_controls()
-
                 except Exception as e:
                     error_msg = f"Erreur lors de la recherche: {str(e)}"
                     st.markdown(error_msg)
                     st.session_state.messages.append({"role": "assistant", "content": error_msg})
                     st.session_state.current_results = []
-
 
 if __name__ == "__main__":
     main()
