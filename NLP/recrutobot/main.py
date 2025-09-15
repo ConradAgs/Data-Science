@@ -282,20 +282,24 @@ def main():
                         # Trier par score décroissant
                         st.session_state.current_results.sort(key=lambda x: x["score"], reverse=True)
 
-                        st.markdown(f"Voici les offres correspondant à votre recherche '{prompt}':")
-                        display_offers_page()
-
+                        # Message résumé
                         results_count = len(st.session_state.current_results)
                         st.session_state.messages.append({
                             "role": "assistant",
                             "content": f"J'ai trouvé {results_count} offres correspondant à '{prompt}'"
                         })
 
+                        # ⚡️ Afficher immédiatement résultats + boutons
+                        st.markdown(f"Voici les offres correspondant à votre recherche '{prompt}':")
+                        display_offers_page()
+                        display_pagination_controls()
+
                 except Exception as e:
                     error_msg = f"Erreur lors de la recherche: {str(e)}"
                     st.markdown(error_msg)
                     st.session_state.messages.append({"role": "assistant", "content": error_msg})
                     st.session_state.current_results = []
+
 
 if __name__ == "__main__":
     main()
