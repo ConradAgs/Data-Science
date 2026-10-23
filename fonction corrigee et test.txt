@@ -1,0 +1,123 @@
+# ==========================================================
+# 1) FONCTION CORRIGEE : get_ptf_inv_esg
+# (a coller a la place de l'ancienne version)
+# ==========================================================
+
+def get_ptf_inv_esg(portfolioId: str, date: str) -> pd.DataFrame:
+    """
+    Cette fonction permet de générer les inventaires + données ESG d'un portefeuille donné
+
+    Dépendances :
+    -------------
+    - portfolioId = code portefeuille
+    - date = date à laquelle on souhaite avoir l'inventaire (str format "YYYY-MM-DD")
+
+    Output :
+    --------
+    - Un DataFrame avec toutes les lignes du portefeuille : les titres en direct
+      avec leurs données ESG, et les fonds avec leurs données transparisées
+      (les valeurs transparisées comblent les valeurs vides des colonnes d'origine).
+    """
+
+    try:
+        df = api.explain_calculation(
+            portfolioId=portfolioId, date=date, mode="fundholdings"
+        )
+    except:
+        try:
+            df = api.explain_calculation(
+                portfolioId=portfolioId, date=date, mode="fundholdings"
+            )
+        except:
+            print("Erreur lors de la génération de l'inventaire du " + date)
+
+    ptf = treat_cols(df, True)
+    ptf["Date"] = date
+    ptf["Ptf_id"] = portfolioId
+
+    col = "transparizedPortfolioMetricResults"
+    mask = ptf[col].apply(lambda x: x != [])
+
+    # Lignes de fonds : on garde TOUTES leurs colonnes d'origine
+    ptf_fonds = ptf[mask].reset_index(drop=True)
+
+    # Lignes de titres en direct : la colonne transparisée est inutile
+    ptf_titres = ptf[~mask].reset_index(drop=True).drop(columns=[col])
+
+    # Valeurs transparisées des fonds (une colonne par métrique)
+    transp = transparize_metrics(
+        df=ptf_fonds[ID_COLS + [col]],
+        metrics_col=col,
+        id_cols=ID_COLS,
+    ).drop(columns=ID_COLS)
+
+    # Les valeurs transparisées comblent les vides de la colonne d'origine.
+    # Même ordre de lignes (index 0..n-1) des deux côtés, donc alignement correct.
+    ptf_fonds = ptf_fonds.drop(columns=[col])
+    ptf_fonds = ptf_fonds.combine_first(transp)
+
+    # combine_first peut réordonner les colonnes : on remet l'ordre d'origine
+    # puis on ajoute les colonnes issues de la transparisation
+    ordre = [c for c in ptf_titres.columns if c in ptf_fonds.columns]
+    ordre += [c for c in ptf_fonds.columns if c not in ordre]
+    ptf_fonds = ptf_fonds[ordre]
+
+    ptf_all = pd.concat([ptf_titres, ptf_fonds], axis=0, ignore_index=True)
+
+    return ptf_all
+
+
+# ==========================================================
+# TEST SUR UN PORTEFEUILLE
+# ==========================================================
+if __name__ == "__main__":
+    PORTFOLIO_ID = "Talou"  # à adapter : code exact du portefeuille
+    DATE = "2026-09-30"  # à adapter : format YYYY-MM-DD
+    COL = "transparizedPortfolioMetricResults"
+
+    # 1) Inventaire brut (avant correction)
+    brut = treat_cols(
+        api.explain_calculation(
+            portfolioId=PORTFOLIO_ID, date=DATE, mode="fundholdings"
+        ),
+        True,
+    )
+    mask_fonds = brut[COL].apply(lambda x: x != [])
+    nb_fonds = int(mask_fonds.sum())
+    print(f"Lignes totales : {len(brut)} | lignes de fonds : {nb_fonds}")
+
+    if nb_fonds == 0:
+        print("Ce portefeuille ne contient aucun fonds : rien à tester.")
+    else:
+        # 2) Inventaire corrigé
+        resultat = get_ptf_inv_esg(PORTFOLIO_ID, DATE)
+        print(f"Lignes après correction : {len(resultat)}")
+
+        # 3) Colonnes en plus / en moins
+        print("Colonnes en plus :", sorted(set(resultat.columns) - set(brut.columns)))
+        print("Colonnes en moins :", sorted(set(brut.columns) - set(resultat.columns)))
+
+        # 4) Valeurs non vides sur les lignes de fonds, avant / après
+        #    (dans le résultat, les titres viennent d'abord puis les fonds)
+        n_titres = len(brut) - nb_fonds
+        avant_f = brut[mask_fonds].drop(columns=[COL])
+        apres_f = resultat.iloc[n_titres:]
+
+        comparaison = pd.DataFrame(
+            {
+                "non vides avant": avant_f.notna().sum(),
+                "non vides après": apres_f.notna().sum(),
+            }
+        ).fillna(0).astype(int)
+        comparaison["gagnées"] = (
+            comparaison["non vides après"] - comparaison["non vides avant"]
+        )
+
+        print("\nColonnes dont des valeurs ont été comblées :")
+        print(comparaison[comparaison["gagnées"] > 0].to_string())
+
+        # 5) Export pour inspection dans Excel
+        resultat.to_csv(
+            f"test_{PORTFOLIO_ID}.csv", sep=";", index=False, encoding="utf-8-sig"
+        )
+        print(f"\nFichier exporté : test_{PORTFOLIO_ID}.csv")
