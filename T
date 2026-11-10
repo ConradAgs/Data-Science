@@ -1,0 +1,87 @@
+/* ==========================================================
+   T09_CONTRIBUTION_ODD
+   Une ligne par instrument x ODD (scores renseignés uniquement)
+   Règle : Score > 2 = Positive ; Score < -2 = Négative ; sinon Neutre
+   ========================================================== */
+T09_CONTRIBUTION_ODD =
+VAR _odd =
+    DATATABLE ( "ODD", INTEGER, { { 1 }, { 2 }, { 3 }, { 4 }, { 5 }, { 6 }, { 7 }, { 8 }, { 9 }, { 10 }, { 11 }, { 12 }, { 13 }, { 14 }, { 15 }, { 16 }, { 17 } } )
+VAR _base =
+    ADDCOLUMNS (
+        CROSSJOIN ( Fact_ESG, _odd ),
+        "k_score",
+            SWITCH (
+                [ODD],
+            1, Fact_ESG[SDG_01_NET_ALIGNMENT_SCORE],
+            2, Fact_ESG[SDG_02_NET_ALIGNMENT_SCORE],
+            3, Fact_ESG[SDG_03_NET_ALIGNMENT_SCORE],
+            4, Fact_ESG[SDG_04_NET_ALIGNMENT_SCORE],
+            5, Fact_ESG[SDG_05_NET_ALIGNMENT_SCORE],
+            6, Fact_ESG[SDG_06_NET_ALIGNMENT_SCORE],
+            7, Fact_ESG[SDG_07_NET_ALIGNMENT_SCORE],
+            8, Fact_ESG[SDG_08_NET_ALIGNMENT_SCORE],
+            9, Fact_ESG[SDG_09_NET_ALIGNMENT_SCORE],
+            10, Fact_ESG[SDG_10_NET_ALIGNMENT_SCORE],
+            11, Fact_ESG[SDG_11_NET_ALIGNMENT_SCORE],
+            12, Fact_ESG[SDG_12_NET_ALIGNMENT_SCORE],
+            13, Fact_ESG[SDG_13_NET_ALIGNMENT_SCORE],
+            14, Fact_ESG[SDG_14_NET_ALIGNMENT_SCORE],
+            15, Fact_ESG[SDG_15_NET_ALIGNMENT_SCORE],
+            16, Fact_ESG[SDG_16_NET_ALIGNMENT_SCORE],
+            17, Fact_ESG[SDG_17_NET_ALIGNMENT_SCORE]
+            )
+    )
+RETURN
+    SELECTCOLUMNS (
+        FILTER ( _base, NOT ISBLANK ( [k_score] ) ),
+        "Nom ptf", Fact_ESG[Nom ptf],
+        "Type_Entite", Fact_ESG[Type_Entite],
+        "Mois", Fact_ESG[Mois],
+        "Date_Maj", Fact_ESG[Date_Maj],
+        "ISIN", Fact_ESG[ISIN],
+        "ISSUER_NAME", Fact_ESG[ISSUER_NAME],
+        "TYPE_ACTIF", Fact_ESG[TYPE_ACTIF],
+        "Poids", Fact_ESG[Poids],
+        "ODD", [ODD],
+        "Score", [k_score],
+        "Type_Contribution",
+            IF ( [k_score] > 2, "Positive", IF ( [k_score] < -2, "Négative", "Neutre" ) ),
+        "Contribution_Ponderee", [k_score] * Fact_ESG[Poids]
+    )
+
+
+/* ==========================================================
+   T10_SYNTHESE_INSTRUMENTS
+   Une ligne par instrument : pour repérer les plus négatifs
+   ========================================================== */
+T10_SYNTHESE_INSTRUMENTS =
+ADDCOLUMNS (
+    SUMMARIZE (
+        T09_CONTRIBUTION_ODD,
+        T09_CONTRIBUTION_ODD[Nom ptf],
+        T09_CONTRIBUTION_ODD[Type_Entite],
+        T09_CONTRIBUTION_ODD[Mois],
+        T09_CONTRIBUTION_ODD[Date_Maj],
+        T09_CONTRIBUTION_ODD[ISIN],
+        T09_CONTRIBUTION_ODD[ISSUER_NAME]
+    ),
+    "Poids",
+        CALCULATE ( MAX ( T09_CONTRIBUTION_ODD[Poids] ) ),
+    "Nb_ODD_Negatifs",
+        CALCULATE (
+            COUNTROWS ( T09_CONTRIBUTION_ODD ),
+            T09_CONTRIBUTION_ODD[Type_Contribution] = "Négative"
+        ),
+    "Nb_ODD_Positifs",
+        CALCULATE (
+            COUNTROWS ( T09_CONTRIBUTION_ODD ),
+            T09_CONTRIBUTION_ODD[Type_Contribution] = "Positive"
+        ),
+    "Pire_Score",
+        CALCULATE ( MIN ( T09_CONTRIBUTION_ODD[Score] ) ),
+    "Contribution_Negative_Ponderee",
+        CALCULATE (
+            SUM ( T09_CONTRIBUTION_ODD[Contribution_Ponderee] ),
+            T09_CONTRIBUTION_ODD[Type_Contribution] = "Négative"
+        )
+)
